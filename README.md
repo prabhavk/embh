@@ -6,7 +6,7 @@
 - Optimizes BH using belief propagation on clique-trees
 - Verifies non-identifiability of root
 - Reuses messages of repeating branch-specific site patterns
-- Suggests optimal location of root clique to minimize messages
+- Suggests optimal location of root clique to minimize number of messages required to compute log-likelihood score
 - Modular C core (GPLv3) with CUDA acceleration 
 
 
