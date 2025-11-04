@@ -1,0 +1,6 @@
+/* 
+
+converts converts fasta to pattern
+input to embh is file in pattern format
+
+*/
