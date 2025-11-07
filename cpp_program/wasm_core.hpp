@@ -1,0 +1,155 @@
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <math.h>  
+#include <numeric> 
+#include <random>
+#include <sstream>
+#include <stdio.h>
+#include <string>
+#include <tuple>
+#include <vector>
+#include <unordered_set>
+#include "third_party/eigen3/Eigen/Dense"
+#include "third_party/json/single_include/nlohmann/json.hpp"
+
+class FamilyJoining;
+class MST_vertex;
+class MST;
+class SEM_vertex_old;
+class clique;
+class cliqueTree;
+class SEM_old;
+
+using namespace std;
+
+struct mt_error : runtime_error {
+    using runtime_error::runtime_error;
+};
+
+
+class EMManager
+{
+private:
+	// bool LoadRateMatrixFromFile(const std::string& path);
+	std::string rate_matrix_path_;
+	Eigen::Matrix<double,20,20> Q_D;
+	default_random_engine generator;
+	vector <string> sequenceNames;
+	map <string,unsigned char> mapDNAtoInteger;		
+	ofstream emt_logFile;
+	int numberOfLargeEdgesThreshold;
+	int numberOfHiddenVertices = 0;
+	int edgeWeightThreshold;	
+	chrono::steady_clock::time_point start_time;
+	chrono::steady_clock::time_point current_time;
+	chrono::steady_clock::time_point t_start_time;
+	chrono::steady_clock::time_point t_end_time;
+	chrono::steady_clock::time_point m_start_time;
+	chrono::steady_clock::time_point m_end_time;
+	chrono::duration<double> timeTakenToComputeEdgeAndVertexLogLikelihoods;
+	chrono::duration<double> timeTakenToComputeGlobalUnrootedPhylogeneticTree;
+	chrono::duration<double> timeTakenToComputeSubtree;
+	chrono::duration<double> timeTakenToComputeSupertree;
+	chrono::duration<double> timeTakenToRootViaEdgeLoglikelihoods;
+	chrono::duration<double> timeTakenToRootViaRestrictedSEM;
+	string fastaFileName;
+	string phylipFileName;
+	string topologyFileName;
+	string prefix_for_output_files;
+	string ancestralSequencesString;
+	string loglikelihood_node_rep_file_name;	
+	string probabilityFileName_pars;
+	string probabilityFileName_diri;
+	string probabilityFileName_pars_root;
+	string probabilityFileName_diri_root;
+	string probabilityFileName_best;
+	double max_ll_pars;
+	double max_ll_diri;	
+	string MSTFileName;
+	string GMMparametersFileName;
+	string distance_measure_for_NJ = "Hamming";
+	bool apply_patch = false;
+	bool grow_tree_incrementally = false;
+	bool flag_topology = false;
+    bool flag_set_gmm_parameters = false;
+	int ComputeHammingDistance(string seq1, string seq2);	
+	int ComputeHammingDistance(vector<unsigned char> recodedSeq1, vector<unsigned char> recodedSeq2);	
+	int GetEdgeIndex (int vertexIndex1, int vertexIndex2, int numberOfVertices);
+	FamilyJoining * F;
+	MST * M;
+	SEM_old * P;	
+	SEM_old * p;
+	void WriteOutputFiles();
+	bool debug;
+	bool verbose;
+	bool localPhyloOnly;	
+	bool useChowLiu;
+	bool modelSelection; 	
+    int max_iter;			
+	string supertree_method;
+	int numberOfVerticesInSubtree;
+	string GetSequenceListToWriteToFile(map <string, vector <unsigned char>> compressedSeqMap, vector <vector <int> > sitePatternRepetitions);
+	vector <string> must_have;
+	vector <string> may_have;
+    int num_repetitions;
+	int max_EM_iter;
+	double conv_thresh;
+    public:
+	void setDayhoffMatrixPath(const std::string& path);
+	
+    EMManager(const string DNAsequenceFileNameToSet,            
+	 		  const string AAsequenceFileNameToSet,
+			  const std::string& parameters_json);
+	//           int num_repetitions,
+	//           int max_iter,
+	//           double conv_threshold,
+	// 		  double pi_a_1,
+	// 		  double pi_a_2,
+	// 		  double pi_a_3,
+	// 		  double pi_a_4,
+	// 		  double M_a_1,
+	// 		  double M_a_2,
+	// 		  double M_a_3,
+	// 		  double M_a_4);
+	~EMManager();
+	double max_log_lik;
+	double max_log_lik_pars;
+	double max_log_lik_diri;
+	double max_log_lik_ssh;
+	string parameters_json;
+	void SetDNAMap();
+	void SetThresholds();
+	void EMTRackboneWithOneExternalVertex();
+	void EMTRackbone_k2020_preprint();
+	void EMgivenInputTopology();	
+	void EMTRackboneWithRootSEMAndMultipleExternalVertices();
+	void EMTRackboneOverlappingSets();
+	void EMTRackboneOnlyLocalPhylo();
+	void EMforCompleteData();
+	void ReadAllSequences(string complete_sequence_file_name);
+	void main(string init_criterion, bool root_search);
+	void MR_HSS(int num_rounds);
+	void CheckList();
+	void SetPatterns();	// characterize quality of patterns
+	// follow up with visualizing pattern weight distribution
+	void EMDNA(); // BH model with parsimony, dirichlet and HSS
+	void NestSearch(); // Find smallest nest size that can be used for MLE on complete pattern set
+	void EM_main();	
+	void EM_pars_hss();
+	void EM_diri_hss();
+    void EMparsimony();
+	void EMdirichlet();
+	void SetprobFileforHSS();
+    void EMhss();
+	string EncodeAsDNA(vector<unsigned char> sequence);
+	vector<unsigned char> DecompressSequence(vector<unsigned char>* compressedSequence, vector<vector<int>>* sitePatternRepeats);	
+};
