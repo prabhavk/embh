@@ -3,11 +3,16 @@
 # Compiler and flags
 CXX = g++
 
+DEV ?= 1
+
+ifeq ($(DEV),1)
+  BASE_CXXFLAGS = -std=c++11 -O0 -g -fPIC  # Fast compilation
+else
+  BASE_CXXFLAGS = -std=c++11 -O2 -fPIC     # Optimized
+endif
+
 # Toggle warnings (set to 0 to disable warnings)
 WARNINGS ?= 0
-
-# Base flags
-BASE_CXXFLAGS = -std=c++11 -O2 -fPIC
 
 # Warning flags
 ifeq ($(WARNINGS),1)
@@ -17,7 +22,7 @@ else
 endif
 
 CXXFLAGS = $(BASE_CXXFLAGS) $(WARN_FLAGS)
-INCLUDES = -I. -Ithird_party/json/single_include -Ithird_party/eigen3
+INCLUDES = -I. -Ithird_party/json/single_include
 LDFLAGS = -shared
 LIBS =
 
@@ -30,8 +35,8 @@ LIBDIR = lib
 TARGET     = $(BINDIR)/embh
 SHARED_LIB = $(LIBDIR)/libembh.so
 
-# Sources (library has ONLY wasm_core.cpp)
-LIB_SOURCES  = wasm_core.cpp
+# Sources (library has ONLY embh_core.cpp)
+LIB_SOURCES  = embh_core.cpp
 MAIN_SOURCES = embh.cpp
 
 # Objects
@@ -48,7 +53,7 @@ all: directories $(SHARED_LIB) $(TARGET)
 directories:
 	@mkdir -p $(OBJDIR) $(BINDIR) $(LIBDIR)
 
-# Shared library (from wasm_core only)
+# Shared library (from embh_core only)
 $(SHARED_LIB): $(LIB_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo "Shared library built: $(SHARED_LIB)"
@@ -107,7 +112,7 @@ ldd: $(TARGET)
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  all        - Build shared library (wasm_core) and executable (embh)"
+	@echo "  all        - Build shared library (embh_core) and executable (embh)"
 	@echo "  main       - Rebuild only main executable"
 	@echo "  lib        - Rebuild only shared library"
 	@echo "  clean      - Remove build artifacts"

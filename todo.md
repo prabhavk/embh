@@ -3,7 +3,13 @@
 
 ## to do software goals
 - [] create class to implement embh using fasta file and edge list
-- [] remove dead code
+- [] initialize parameters using F81 model
+- [] compute relative contribution of each pattern
+- [] determine patterns that contribute to 90%, 95% and 99% of total log-likelihood score for F81 model
+- [] save on computation time by reusing 
+- [] implement early stopping for embh using Aitken's method
+- [] perform EM on small data set comprising heaviest patterns to determine convergence threshold
+- [] test Aitken's method to determine convergence threshold
 - [] split c++ code into class-wise modules
 - [] serial c++ code for optimizing log likelihood using patterns
 - [] convert serial c++ to serial c code
@@ -16,7 +22,8 @@
 
 ## to do analysis goals
 - [] characterize pattern weight distribution for ran alignment
-- [] generate  embh on test data
+- [] perform embh on test data
+- [] explore impact of threshold
 - [] benchmark memory consumption of optimizing embh
 - [] characterize clique-tree-branch specific site patterns
 
