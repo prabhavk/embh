@@ -1,1 +1,1 @@
-obj/embh.o: embh.cpp
+obj/embh.o: embh.cpp embh_core.hpp
