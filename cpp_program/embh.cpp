@@ -30,44 +30,53 @@ Output
 #include "embh_core.hpp"
 
 int main(int argc, char* argv[]) {
-    char* edge_list = nullptr;
-    char* pattern_file = nullptr;
-    char* pattern_weight_file = nullptr;
-    char* base_comp_file = nullptr;
-    char* root_estimate = nullptr;
-    char* root_test = nullptr;
+    char* edge_list_file_name = nullptr;
+    char* fasta_file_name = nullptr;
+    char* pattern_file_name = nullptr;    
+    char* base_comp_file_name = nullptr;
+    char* root_optimize_name = nullptr;
+    char* root_check_name = nullptr;
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) edge_list = argv[++i];
-        else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) pattern_file = argv[++i];
-        else if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) pattern_weight_file = argv[++i];
-        else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) base_comp_file = argv[++i];
-        else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) root_estimate = argv[++i];
-        else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) root_test = argv[++i];
+        if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) edge_list_file_name = argv[++i];
+        else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) fasta_file_name = argv[++i];
+        else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) pattern_file_name = argv[++i];        
+        else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) base_comp_file_name = argv[++i];
+        else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) root_optimize_name = argv[++i];
+        else if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) root_check_name = argv[++i];
     }
 
-    if (!edge_list || !pattern_file || !root_estimate || !root_test) {
-        std::cerr << "Usage: " << argv[0] << " -e edge_list -p pattern_file -w pattern_weight_file -b base_comp_file -r root_estimate -t root_test\n";
+    if (!edge_list_file_name || !pattern_file_name || !root_optimize_name || !root_check_name) {
+        std::cerr << "Usage: " << argv[0] << " -e edge_list -f fasta_file -p pattern_file -b base_comp_file -o root_optimize_name -c root_check_name\n";
         return 1;
     }
 
-    printf("Edge list file is: %s\n", edge_list);
-    printf("Pattern file name is: %s\n", pattern_file);
-    printf("Pattern weight file name is: %s\n", pattern_weight_file);
-    printf("Base composition file name is: %s\n", base_comp_file);
-    printf("Root estimate is: %s\n", root_estimate);
-    printf("Root test is: %s\n", root_test);
+    printf("edge list file is: %s\n", edge_list_file_name);
+    printf("fasta file name is: %s\n", fasta_file_name);
+    printf("pattern file name is: %s\n", pattern_file_name);    
+    printf("base composition file name is: %s\n", base_comp_file_name);
+    printf("root optimize name is: %s\n", root_optimize_name);
+    printf("root check name is: %s\n", root_check_name);
 
-    // create object of class SEM 
+    EMBH * embh_obj = new EMBH(
+        string(edge_list_file_name),
+        string(fasta_file_name),
+        string(pattern_file_name),
+        string(base_comp_file_name),
+        string(root_optimize_name),
+        string(root_check_name)
+    );
 
-    // SEM * P = new SEM(0.001,100,0);
-    // read edge list
-    // read fasta file
-    // set root for estimate
-    // optimize BH. store log likelihood
-    // set root for test
-    // compute log likelihood
-    // compare log likelihood
+    delete embh_obj;
+
+    // create object of class EMBH
+    
+    // define F81 model
+
+    // Compute log likelihood of F81 model with fasta sequences as input
+
+    // Compute log likelihood of F81 model with patterns as input
+
     
     return 0;
 }

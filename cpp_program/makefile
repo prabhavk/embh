@@ -6,7 +6,7 @@ CXX = g++
 DEV ?= 1
 
 ifeq ($(DEV),1)
-  BASE_CXXFLAGS = -std=c++11 -O0 -g -fPIC  # Fast compilation
+  BASE_CXXFLAGS = -std=c++11 -O0 -g3 -fPIC -fno-omit-frame-pointer # Fast compilation
 else
   BASE_CXXFLAGS = -std=c++11 -O2 -fPIC     # Optimized
 endif
@@ -22,7 +22,7 @@ else
 endif
 
 CXXFLAGS = $(BASE_CXXFLAGS) $(WARN_FLAGS)
-INCLUDES = -I. -Ithird_party/json/single_include
+INCLUDES = -I. 
 LDFLAGS = -shared
 LIBS =
 
@@ -30,6 +30,7 @@ LIBS =
 OBJDIR = obj
 BINDIR = bin
 LIBDIR = lib
+DATADIR = data
 
 # Targets
 TARGET     = $(BINDIR)/embh
@@ -92,6 +93,10 @@ lib: directories
 .PHONY: run
 run: $(TARGET)
 	cd $(BINDIR) && ./embh
+
+.Phony: test
+test: 
+	$(TARGET) -e $(DATADIR)/RAxML_bipartitions.CDS_FcC_partition.edgelist -f $(DATADIR)/CDS_FcC_1000.fas -p $(DATADIR)/patterns_1000.pat -b $(DATADIR)/patterns_1000.basecomp -o h_0 -c h_5
 
 # Debug build
 .PHONY: debug

@@ -51,6 +51,12 @@ private:
 	chrono::duration<double> timeTakenToComputeSupertree;
 	chrono::duration<double> timeTakenToRootViaEdgeLoglikelihoods;
 	chrono::duration<double> timeTakenToRootViaRestrictedSEM;
+	string edge_list_file_name;
+	string fasta_file_name;
+	string pattern_file_name;
+	string base_comp_file_name;
+	string root_train;
+	string root_test;
 	string fastaFileName;
 	string phylipFileName;
 	string topologyFileName;
@@ -70,8 +76,7 @@ private:
 	bool apply_patch = false;
 	bool grow_tree_incrementally = false;
 	bool flag_topology = false;
-    bool flag_set_gmm_parameters = false;
-	int GetEdgeIndex (int vertexIndex1, int vertexIndex2, int numberOfVertices);	
+    bool flag_set_gmm_parameters = false;	
 	SEM * P;	
 	SEM * p;	
 	bool debug;
@@ -87,12 +92,17 @@ private:
     int num_repetitions;
 	int max_EM_iter;
 	double conv_thresh;
-    public:
-	void setDayhoffMatrixPath(const std::string& path);
+    public:	
 	
-    EMBH(const string DNAsequenceFileNameToSet,	 		  
-		 const string EdgeListFileNameToSet);
+    EMBH(const string EdgeListFileNameToSet,
+		 const string FastaFileNameToSet,
+	     const string PatternListFileNameToSet,	     
+		 const string BaseCompositionFileNameToSet,
+		 const string RootEstimateToSet,
+		 const string RootTestToSet
+		);
 	~EMBH();
+
 	double max_log_lik;
 	double max_log_lik_pars;
 	double max_log_lik_diri;
