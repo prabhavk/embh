@@ -39,7 +39,7 @@ run: $(TARGET)
 
 # Test the program
 test: $(TARGET)
-	./$(TARGET) -e test.edgelist -f test.fas -r h_0 -t h_3
+	./$(TARGET) -e ../data/RAxML_bipartitions.CDS_FcC_partition.edgelist -f ../data/CDS_FcC_1000.fas -p ../data/patterns_1000.pat -b ../data/patterns_1000.basecomp -r h_0 -t h_5
 
 # Phony targets (not actual files)
 .PHONY: all clean rebuild run test

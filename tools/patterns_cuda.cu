@@ -1,13 +1,13 @@
 // patterns_cuda.cu
 // Build unique site-patterns from a FASTA alignment using CUDA to
-// hash each column and count A/C/G/T in parallel, AFTER replacing
+// hash each column and count A/C/G/T in parallel, after replacing
 // all non-ACGT characters with a gap '-'.
 //
 // Outputs:
-//   <prefix>.pat       (each line: "<weight> <pattern>", sorted by decreasing weight)
+//   <prefix>.pat       (each line: "<weight> <pattern>", pattern encoded as integers 0-4)
 //   <prefix>.basecomp  (weighted A/C/G/T composition, plus gap stats)
 //
-// Compile: nvcc -O3 -std=c++17 patterns_cuda.cu -o patterns_cuda
+// Compile: nvcc -O3 -std=c++11 patterns_cuda.cu -o patterns_cuda
 // Usage:   ./patterns_cuda input.fasta [output_prefix]
 
 #include <cstdio>
@@ -134,18 +134,27 @@ __global__ void hash_columns_kernel(
 /* ---------------- Host aggregation with collision check ---------------- */
 
 struct PatAgg {
-  std::string key; // transformed pattern string (non-ACGT -> '-'), length = nseq
+  std::vector<int> key; // transformed pattern as integers (0=A, 1=C, 2=G, 3=T, 4=gap)
   int weight = 0;
   long long a=0,c=0,g=0,t=0; // aggregated base counts (per pattern × weight)
 };
 
-static std::string column_string_transformed(const SeqVec& sv, size_t pos) {
-  std::string col; col.resize(sv.v.size());
+// Convert character to integer encoding: A=0, C=1, G=2, T=3, gap=4
+static int char_to_int(char c) {
+  char up = (char)std::toupper((unsigned char)c);
+  if (up == 'A') return 0;
+  if (up == 'C') return 1;
+  if (up == 'G') return 2;
+  if (up == 'T') return 3;
+  return 4; // gap or non-ACGT
+}
+
+static std::vector<int> column_string_transformed(const SeqVec& sv, size_t pos) {
+  std::vector<int> col;
+  col.resize(sv.v.size());
   for (size_t s=0; s<sv.v.size(); ++s) {
     char raw = sv.v[s].seq[pos];
-    char up  = (char)std::toupper((unsigned char)raw);
-    if (up=='A' || up=='C' || up=='G' || up=='T') col[s] = up;
-    else                                          col[s] = '-'; // convert non-ACGT to gap
+    col[s] = char_to_int(raw);
   }
   return col;
 }
@@ -232,13 +241,24 @@ int main(int argc, char** argv) {
   groups.reserve(L*1.3);
   for (size_t pos=0; pos<L; ++pos) groups[hashes[pos]].push_back(pos);
 
-  std::unordered_map<std::string, PatAgg> pats;
+  // Hash function for vector<int>
+  struct VectorIntHash {
+    std::size_t operator()(const std::vector<int>& v) const {
+      std::size_t seed = v.size();
+      for (auto& i : v) {
+        seed ^= i + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+      }
+      return seed;
+    }
+  };
+
+  std::unordered_map<std::vector<int>, PatAgg, VectorIntHash> pats;
   pats.reserve(groups.size()*2);
 
   for (auto& kv : groups) {
     auto& idxs = kv.second;
     for (size_t pos : idxs) {
-      std::string key = column_string_transformed(sv, pos); // transformed (non-ACGT -> '-')
+      std::vector<int> key = column_string_transformed(sv, pos);
       auto it = pats.find(key);
       if (it == pats.end()) {
         PatAgg agg;
@@ -283,9 +303,13 @@ int main(int argc, char** argv) {
   FILE* fpat = fopen(path_pat, "w");   if (!fpat) die("cannot write .pat");
   FILE* fbc  = fopen(path_bc,  "w");   if (!fbc)  die("cannot write .basecomp");
 
-  // Patterns file: "<weight> <pattern>"
+  // Patterns file: "<weight> <pattern>" with integers
   for (const auto& p : out) {
-    fprintf(fpat, "%d %s\n", p.weight, p.key.c_str());
+    fprintf(fpat, "%d", p.weight);
+    for (size_t i = 0; i < p.key.size(); ++i) {
+      fprintf(fpat, " %d", p.key[i]);
+    }
+    fprintf(fpat, "\n");
   }
 
   // Weighted base composition (after conversion; gaps ignored)
@@ -301,10 +325,12 @@ int main(int argc, char** argv) {
     fG = (double)TG / (double)TOT;
     fT = (double)TT / (double)TOT;
   }
-  fprintf(fbc, "A\t%.10f\t(%lld)\n", fA, TA);
-  fprintf(fbc, "C\t%.10f\t(%lld)\n", fC, TC);
-  fprintf(fbc, "G\t%.10f\t(%lld)\n", fG, TG);
-  fprintf(fbc, "T\t%.10f\t(%lld)\n", fT, TT);
+  
+  // Updated format: use integer encoding in comments
+  fprintf(fbc, "0\t%.10f\t(%lld)\n", fA, TA);  // A=0
+  fprintf(fbc, "1\t%.10f\t(%lld)\n", fC, TC);  // C=1
+  fprintf(fbc, "2\t%.10f\t(%lld)\n", fG, TG);  // G=2
+  fprintf(fbc, "3\t%.10f\t(%lld)\n", fT, TT);  // T=3
   fprintf(fbc, "TOTAL_ACGT\t%lld\n", TOT);
   fprintf(fbc, "NSEQ\t%zu\n", nseq);
   fprintf(fbc, "NSITES\t%zu\n", L);
