@@ -1,10 +1,7 @@
 # project embh
 
 
-
 ## to do software goals
-- [] replace gap encoding of -1 with 4
-- [] compute log-likelihood of F81 model using pruning algorithm with fasta input
 - [] compute log-likelihood of F81 model using pruning algorithm with patterns input
 - [] compute log-likelihood of F81 model using propagation algorithm with patterns input
 - [] reuse message of branch pattern for propagation algorithm with patterns input and compare log-likelihood score
@@ -28,6 +25,8 @@
 - [] characterize clique-tree-branch specific site patterns
 
 ## completed software goals
+- [x] replace gap encoding of -1 with 4
+- [x] compute log-likelihood of F81 model using pruning algorithm with fasta input
 - [x] create class to implement embh using fasta file and edge list
 - [x] create test data using using 1000 columns of ran alignment
 

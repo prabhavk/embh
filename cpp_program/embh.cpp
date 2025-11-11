@@ -32,7 +32,8 @@ Output
 int main(int argc, char* argv[]) {
     char* edge_list_file_name = nullptr;
     char* fasta_file_name = nullptr;
-    char* pattern_file_name = nullptr;    
+    char* pattern_file_name = nullptr;
+    char* taxon_order_file_name = nullptr;
     char* base_comp_file_name = nullptr;
     char* root_optimize_name = nullptr;
     char* root_check_name = nullptr;
@@ -41,6 +42,7 @@ int main(int argc, char* argv[]) {
         if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) edge_list_file_name = argv[++i];
         else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) fasta_file_name = argv[++i];
         else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) pattern_file_name = argv[++i];        
+        else if (strcmp(argv[i], "-x") == 0 && i + 1 < argc) taxon_order_file_name = argv[++i];
         else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) base_comp_file_name = argv[++i];
         else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) root_optimize_name = argv[++i];
         else if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) root_check_name = argv[++i];
@@ -53,8 +55,9 @@ int main(int argc, char* argv[]) {
 
     printf("edge list file is: %s\n", edge_list_file_name);
     printf("fasta file name is: %s\n", fasta_file_name);
-    printf("pattern file name is: %s\n", pattern_file_name);    
+    printf("pattern file name is: %s\n", pattern_file_name);
     printf("base composition file name is: %s\n", base_comp_file_name);
+    printf("taxon order file name is: %s\n", taxon_order_file_name);
     printf("root optimize name is: %s\n", root_optimize_name);
     printf("root check name is: %s\n", root_check_name);
 
@@ -62,6 +65,7 @@ int main(int argc, char* argv[]) {
         string(edge_list_file_name),
         string(fasta_file_name),
         string(pattern_file_name),
+        string(taxon_order_file_name),
         string(base_comp_file_name),
         string(root_optimize_name),
         string(root_check_name)

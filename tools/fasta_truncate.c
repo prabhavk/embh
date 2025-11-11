@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define MAX_LINE 10000
-#define MAX_SEQ_LEN 2000
+#define MAX_SEQ_LEN 3000
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {

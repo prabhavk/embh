@@ -7,8 +7,9 @@
 #include <sstream>
 #include <array>
 #include <cassert>
-#include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -31,9 +32,123 @@ int ll_precision = 14;
 
 ///...///...///...///...///...///...///...///...///... SEM_vertex ///...///...///...///...///...///...///...///...///
 
+class pattern {
+	public:
+ 		int weight;
+		vector <char> characters;
+	pattern (int weightToSet, vector <char> charactersToSet) {
+		this->weight = weightToSet;
+		this->characters = charactersToSet;
+	}
+};
+
+///...///...///...///...///...///...///...///...///... 3-BIT PACKED PATTERN STORAGE ///...///...///...///...///...///...///...///...///
+
+// 3-bit packed pattern storage class
+// Stores DNA bases (0-4) using 3 bits per base for 60% memory savings
+// Values: 0=A, 1=C, 2=G, 3=T, 4=gap
+class PackedPatternStorage {
+private:
+    vector <uint8_t> packed_data;  // Packed 3-bit values
+    int num_patterns;
+    int num_taxa;
+    
+    // Pack 3-bit value at specific position
+    void set_base(int pattern_idx, int taxon_idx, uint8_t base) {
+        int bit_position = (pattern_idx * num_taxa + taxon_idx) * 3;
+        int byte_idx = bit_position / 8;
+        int bit_offset = bit_position % 8;
+        
+        // Ensure we have enough space
+        int required_bytes = (bit_position + 3 + 7) / 8;
+        if (packed_data.size() < required_bytes) {
+            packed_data.resize(required_bytes, 0);
+        }
+        
+        // Clear the 3 bits we're about to write
+        if (bit_offset <= 5) {
+            // All 3 bits in same byte
+            uint8_t mask = ~(0x07 << bit_offset);
+            packed_data[byte_idx] = (packed_data[byte_idx] & mask) | (base << bit_offset);
+        } else {
+            // Spans two bytes
+            int bits_in_first = 8 - bit_offset;
+            int bits_in_second = 3 - bits_in_first;
+            
+            uint8_t mask1 = ~(((1 << bits_in_first) - 1) << bit_offset);
+            packed_data[byte_idx] = (packed_data[byte_idx] & mask1) | (base << bit_offset);
+            
+            if (byte_idx + 1 < packed_data.size()) {
+                uint8_t mask2 = ~((1 << bits_in_second) - 1);
+                packed_data[byte_idx + 1] = (packed_data[byte_idx + 1] & mask2) | (base >> bits_in_first);
+            }
+        }
+    }
+    
+public:
+    PackedPatternStorage(int num_patterns, int num_taxa) 
+        : num_patterns(num_patterns), num_taxa(num_taxa) {
+        int total_bits = num_patterns * num_taxa * 3;
+        int required_bytes = (total_bits + 7) / 8;
+        packed_data.resize(required_bytes, 0);
+    }
+    
+    // Get base at specific position (unpacks 3 bits)
+    uint8_t get_base(int pattern_idx, int taxon_idx) const {
+        int bit_position = (pattern_idx * num_taxa + taxon_idx) * 3;
+        int byte_idx = bit_position / 8;
+        int bit_offset = bit_position % 8;
+        
+        if (byte_idx >= packed_data.size()) return 4; // gap
+        
+        if (bit_offset <= 5) {
+            // All 3 bits in same byte
+            return (packed_data[byte_idx] >> bit_offset) & 0x07;
+        } else {
+            // Spans two bytes
+            int bits_in_first = 8 - bit_offset;
+            uint8_t low_bits = (packed_data[byte_idx] >> bit_offset);
+            
+            if (byte_idx + 1 < packed_data.size()) {
+                int bits_in_second = 3 - bits_in_first;
+                uint8_t high_bits = (packed_data[byte_idx + 1] & ((1 << bits_in_second) - 1));
+                return low_bits | (high_bits << bits_in_first);
+            }
+            return low_bits & 0x07;
+        }
+    }
+    
+    // Store pattern from vector
+    void store_pattern(int pattern_idx, const vector<uint8_t>& pattern) {
+        for (int i = 0; i < min((int)pattern.size(), num_taxa); i++) {
+            set_base(pattern_idx, i, pattern[i]);
+        }
+    }
+    
+    // Get entire pattern as vector
+    vector<uint8_t> get_pattern(int pattern_idx) const {
+        vector<uint8_t> pattern(num_taxa);
+        for (int i = 0; i < num_taxa; i++) {
+            pattern[i] = get_base(pattern_idx, i);
+        }
+        return pattern;
+    }
+    
+    // Get memory usage stats
+    size_t get_memory_bytes() const {
+        return packed_data.size();
+    }
+    
+    int get_num_patterns() const { return num_patterns; }
+    int get_num_taxa() const { return num_taxa; }
+};
+
+///...///...///...///...///...///...///...///...///... SEM_vertex ///...///...///...///...///...///...///...///...///
+
 class SEM_vertex {
 public:
 	int degree = 0;
+	int pattern_index;
 	int timesVisited = 0;
 	bool observed = 0;
 	string completeSequence;
@@ -1063,6 +1178,10 @@ public:
 	vector <int> gaplesscompressedDNAsites;
 	vector <bool> gapLessDNAFlag;
 	vector <bool> gapLessAAFlag;
+	vector <pattern *> patterns;
+	PackedPatternStorage* packed_patterns = nullptr;
+    vector <int> pattern_weights;
+    int num_patterns_from_file = 0;
 	int rep;	
 	void addToZeroEntriesOfTransitionMatrix(emtr::Md& P);
 	void addToZeroEntriesOfRootProbability(array<double,4>& p);
@@ -1138,9 +1257,7 @@ public:
 	string probabilityFileName_pars;
 	string probabilityFileName_hss;
 	string probabilityFileName_diri;
-	string prefix_for_output_files;
-	string ancestralSequencesString = "";
-	// void SetFJTree(const fj::Graph& tree);
+	string prefix_for_output_files;	
 	double gap_proportion_in_pattern(const vector<int>& pat);
 	int unique_non_gap_count_in_pattern(const std::vector<int>& pat);
 	double sequenceLength;
@@ -1175,13 +1292,14 @@ public:
 	map <string, double> vertexLogLikelihoodsMapToAddToGlobalPhylogeneticTree;
 	map <pair<SEM_vertex *,SEM_vertex *>,double> edgeLogLikelihoodsMap;
 	SEM_vertex * externalVertex;
+	void ReadPatternsFromFile(string pattern_file_name, string taxon_order_file_name);
+    void ComputeLogLikelihoodUsingPatterns();
 	void AddArc(SEM_vertex * from, SEM_vertex * to);
 	void RemoveArc(SEM_vertex * from, SEM_vertex * to);
 	void ClearDirectedEdges();
 	void ClearUndirectedEdges();
 	void ClearAllEdges();
-	void AddVertex(string name, vector <int> compressedSequenceToAdd);	
-	void AddWeightedEdges(vector<tuple<string,string,double>> weightedEdgesToAdd);
+	void AddVertex(string name, vector <int> compressedSequenceToAdd);		
 	void AddWeightedEdgesFromFile(const string edgeListFileName);
 	void AddEdgeLogLikelihoods(vector<tuple<string,string,double>> edgeLogLikelihoodsToAdd);
 	void AddExpectedCountMatrices(map < pair <SEM_vertex * , SEM_vertex *>, emtr::Md > expectedCountsForVertexPair);	
@@ -1278,6 +1396,8 @@ public:
 	bool root_search;
 	string init_criterion;
 	string parameter_file;	
+	void StorePatterns(string pattern_file_name);
+	void StorePatternIndex(string taxon_order_file_name);
 	void ComputeLogLikelihood();
 	void ComputeTrifleLogLikelihood(int layer);
 	int siteIdx;	
@@ -1372,6 +1492,10 @@ public:
 	}
 	
 	~SEM () {
+		if (packed_patterns != nullptr) {
+			delete packed_patterns;
+			packed_patterns = nullptr;
+    	}
 		for (pair <int, SEM_vertex * > idPtrPair : * this->vertexMap) {
 			delete idPtrPair.second;
 		}
@@ -2084,8 +2208,6 @@ void SEM::StoreEdgeListAndSeqToAdd() {
 		}		
 	}	
 }
-
-
 
 emtr::Md SEM::ComputeTransitionMatrixUsingAncestralStatesForTrifle(SEM_vertex * p, SEM_vertex * c, int layer) {	
 	emtr::Md P = emtr::Md{};				
@@ -3178,6 +3300,116 @@ void SEM::ComputeTrifleLogLikelihood(int layer) {
 	}
 }
 
+void SEM::StorePatterns(string pattern_file_name) {
+	this->patterns.clear();
+	
+
+}
+
+void SEM::ReadPatternsFromFile(string pattern_file_name, string taxon_order_file_name) {
+    // First, read taxon order to establish mapping
+    this->StorePatternIndex(taxon_order_file_name);
+    
+    ifstream inFile(pattern_file_name);
+    if (!inFile.is_open()) {
+        cerr << "Error: Cannot open pattern file " << pattern_file_name << endl;
+        return;
+    }
+    
+    // Count patterns and determine number of taxa
+    vector<vector<int>> temp_patterns;
+    vector<int> temp_weights;
+    string line;
+    
+    while (getline(inFile, line)) {
+        if (line.empty()) continue;
+        
+        istringstream iss(line);
+        int weight;
+        iss >> weight;
+        
+        vector<int> pattern;
+        int base;
+        while (iss >> base) {
+            pattern.push_back(base);
+        }
+        
+        if (!pattern.empty()) {
+            temp_patterns.push_back(pattern);
+            temp_weights.push_back(weight);
+        }
+    }
+    inFile.close();
+    
+    if (temp_patterns.empty()) {
+        cerr << "Error: No patterns found in file" << endl;
+        return;
+    }
+    
+    num_patterns_from_file = temp_patterns.size();
+    int num_taxa = temp_patterns[0].size();
+    
+    // Create packed storage
+    if (packed_patterns != nullptr) {
+        delete packed_patterns;
+    }
+    packed_patterns = new PackedPatternStorage(num_patterns_from_file, num_taxa);
+    
+    // Store patterns in packed format
+    for (int i = 0; i < num_patterns_from_file; i++) {
+        vector<uint8_t> pattern_uint8(temp_patterns[i].begin(), temp_patterns[i].end());
+        packed_patterns->store_pattern(i, pattern_uint8);
+    }
+    
+    // Store weights
+    pattern_weights = temp_weights;
+    
+    // Update num_dna_patterns to match pattern file
+    this->num_dna_patterns = num_patterns_from_file;
+    
+    // Copy weights to DNAPatternWeights for compatibility
+    this->DNAPatternWeights = temp_weights;
+    
+    cout << "Loaded " << num_patterns_from_file << " patterns with " 
+         << num_taxa << " taxa" << endl;
+    cout << "Memory usage: " << packed_patterns->get_memory_bytes() 
+         << " bytes (3-bit packed)" << endl;
+    
+    // Calculate memory savings
+    size_t unpacked_size = num_patterns_from_file * num_taxa * sizeof(int);
+    size_t packed_size = packed_patterns->get_memory_bytes();
+    double savings_pct = 100.0 * (1.0 - (double)packed_size / unpacked_size);
+    cout << "Memory savings: " << savings_pct << "% compared to int storage" << endl;
+}
+
+
+void SEM::StorePatternIndex(string taxon_order_file_name){
+	ifstream inFile(taxon_order_file_name);
+    if (!inFile.is_open()) {
+        cerr << "Error: Cannot open file " << taxon_order_file_name << endl;
+        return;
+    }
+    
+    string line;
+    getline(inFile, line); // Skip header
+    
+    while (getline(inFile, line)) {
+        if (line.empty()) continue;
+        
+        istringstream iss(line);
+        string taxon_name;
+        int position;
+        
+        if (getline(iss, taxon_name, ',') && (iss >> position)) {
+            SEM_vertex* v = this->GetVertex(taxon_name);
+            if (v != nullptr) {
+                v->pattern_index = position;
+            }
+        }
+    }    
+    inFile.close();
+}
+
 // Case 1: Observed vertices may have out degree > 0
 // Case 2: Root may have out degree = one
 // Case 3: Directed tree (rooted) with vertices with outdegree 2 or 0.
@@ -3218,10 +3450,18 @@ void SEM::ComputeLogLikelihood() {
 			// Initialize parent p if absent
 			if (conditionalLikelihoodMap.find(p) == conditionalLikelihoodMap.end()) {
 				if (p->id > this->numberOfObservedVertices - 1) {
+					// cout << p->name << " is latent" << endl;
 					conditionalLikelihood.fill(1.0);      // latent
 				} else {
-					conditionalLikelihood.fill(0.0);      // observed
-					conditionalLikelihood[p->DNAcompressed[site]] = 1.0;
+					int base = p->DNAcompressed[site];
+					if (base < 4) {
+						// Valid DNA base (0-3)
+						conditionalLikelihood.fill(0.0);
+						conditionalLikelihood[base] = 1.0;
+					} else {
+						// Gap (4) - treat as missing data
+						conditionalLikelihood.fill(1.0);
+					}
 				}
 				conditionalLikelihoodMap.insert({p, conditionalLikelihood});
 			}
@@ -3244,7 +3484,24 @@ void SEM::ComputeLogLikelihood() {
 					conditionalLikelihoodMap[p][dna_p] /= largestConditionalLikelihood;
 				}
 				p->logScalingFactors += log(largestConditionalLikelihood);
-			} else {				
+			} else {
+				cout << " p name is " << p->name << endl;
+				cout << " c name is " << c->name << endl;
+				cout << "conditional likelihood is zero " << largestConditionalLikelihood << endl;
+				for (int i = 0; i < 4; i ++) {
+					for (int j = 0; j < 4; j ++) {
+						cout << "c->transitionMatrix[" << i << "," << j << "] = " << c->transitionMatrix[i][j] << endl;
+					}
+				}	
+				cout << "site is " << site << endl;
+				cout << "conditionalLikelihoodMap[p]: ";
+				for (int i = 0; i < 4; i ++) {
+					cout << conditionalLikelihoodMap[p][i] << " ";
+				}
+				cout << endl;
+				for (int i = 0; i < 4; i ++) {
+					cout << "childCL[" << i << "] = " << childCL[i] << endl;
+				}
 				throw mt_error("Largest conditional likelihood value is zero");
 			}
 		}
@@ -3257,6 +3514,175 @@ void SEM::ComputeLogLikelihood() {
 
 		this->logLikelihood += (this->root->logScalingFactors + log(siteLikelihood)) * this->DNAPatternWeights[site];
 	}
+}
+
+void SEM::ComputeLogLikelihoodUsingPatterns() {
+    if (packed_patterns == nullptr) {
+        cerr << "Error: No patterns loaded. Call ReadPatternsFromFile() first." << endl;
+        return;
+    }
+    
+    this->logLikelihood = 0;
+    map<SEM_vertex*, array<double,4>> conditionalLikelihoodMap;
+    array<double,4> conditionalLikelihood;
+    double partialLikelihood;
+    double siteLikelihood;	
+    double largestConditionalLikelihood = 0;
+    
+    SEM_vertex* p;
+    SEM_vertex* c;
+    emtr::Md P;
+    
+    // Get pattern-to-taxon mapping
+    map<int, int> pattern_index_to_vertex_index;
+    for (auto& pair : *this->vertexMap) {
+        SEM_vertex* v = pair.second;
+        if (v->observed && v->pattern_index >= 0) {
+            pattern_index_to_vertex_index[v->pattern_index] = v->id;
+        }
+    }
+    
+    int num_taxa = packed_patterns->get_num_taxa();
+    
+    // Iterate over each pattern (site)
+    for (int pattern_idx = 0; pattern_idx < num_patterns_from_file; pattern_idx++) {
+        conditionalLikelihoodMap.clear(); 
+        this->ResetLogScalingFactors();
+        
+        // Get the pattern for this site
+        vector<uint8_t> pattern = packed_patterns->get_pattern(pattern_idx);
+        
+        // Build a map from vertex ID to base
+        map<int, uint8_t> vertex_to_base;
+        for (int taxon_idx = 0; taxon_idx < num_taxa; taxon_idx++) {
+            auto it = pattern_index_to_vertex_index.find(taxon_idx);
+            if (it != pattern_index_to_vertex_index.end()) {
+                int vertex_id = it->second;
+                vertex_to_base[vertex_id] = pattern[taxon_idx];
+            }
+        }
+        
+        // Traverse tree using post-order edges
+        for (auto& edge : this->edgesForPostOrderTreeTraversal) {
+            tie(p, c) = edge;
+            P = c->transitionMatrix;
+            
+            p->logScalingFactors += c->logScalingFactors;
+            
+            // Initialize leaf child (ONLY for outDegree == 0)
+            if (c->outDegree == 0) {	
+                uint8_t base = 4; // default to gap
+                auto it = vertex_to_base.find(c->id);
+                if (it != vertex_to_base.end()) {
+                    base = it->second;
+                }
+                
+                // FIXED: Match original behavior exactly
+                if (base != 4) { // not gap
+                    conditionalLikelihood.fill(0.0);
+                    conditionalLikelihood[base] = 1.0;
+                } else {
+                    conditionalLikelihood.fill(1.0);
+                }
+                conditionalLikelihoodMap.insert({c, conditionalLikelihood});
+            }
+            
+            // Initialize parent p if absent
+            if (conditionalLikelihoodMap.find(p) == conditionalLikelihoodMap.end()) {
+                if (p->id > this->numberOfObservedVertices - 1) {
+                    // Latent (hidden) vertex - treat as missing data
+                    conditionalLikelihood.fill(1.0);
+                } else {
+                    // Observed vertex as parent
+                    // NOTE: In a properly rooted tree, observed vertices (leaves) should have outDegree == 0
+                    // However, if an observed vertex appears as a parent, we need to handle it
+                    uint8_t base = 4;  // default to gap
+                    auto it = vertex_to_base.find(p->id);
+                    if (it != vertex_to_base.end()) {
+                        base = it->second;
+                    }
+                    
+                    // CRITICAL FIX: The original code does NOT check for gaps when initializing parents
+                    // It directly does: conditionalLikelihood[p->DNAcompressed[site]] = 1.0
+                    // This assumes DNAcompressed never has 4 for observed parents
+                    // But our pattern file HAS gaps (value 4), so we must check
+                    if (base < 4) {
+                        // Valid DNA base (0-3)
+                        conditionalLikelihood.fill(0.0);
+                        conditionalLikelihood[base] = 1.0;
+                    } else {
+                        // Gap (4) - treat as missing data (all states equally likely)
+                        conditionalLikelihood.fill(1.0);
+                    }
+                }
+                conditionalLikelihoodMap.insert({p, conditionalLikelihood});
+            }
+            
+            // DP update
+            largestConditionalLikelihood = 0.0;
+            const auto& childCL = conditionalLikelihoodMap.at(c);
+            
+            for (int dna_p = 0; dna_p < 4; ++dna_p) {
+                partialLikelihood = 0.0;
+                for (int dna_c = 0; dna_c < 4; ++dna_c) {
+                    partialLikelihood += P[dna_p][dna_c] * childCL[dna_c];
+                }
+                conditionalLikelihoodMap[p][dna_p] *= partialLikelihood;
+                largestConditionalLikelihood = max(largestConditionalLikelihood, 
+                                                  conditionalLikelihoodMap[p][dna_p]);
+            }
+            
+            if (largestConditionalLikelihood > 0.0) {
+                for (int dna_p = 0; dna_p < 4; ++dna_p) {
+                    conditionalLikelihoodMap[p][dna_p] /= largestConditionalLikelihood;
+                }
+                p->logScalingFactors += log(largestConditionalLikelihood);
+            } else {
+                // Debug output (same as original)
+                cout << "conditional likelihood is zero " << largestConditionalLikelihood << endl;
+                cout << "pattern index: " << pattern_idx << endl;
+                cout << "p->id: " << p->id << " c->id: " << c->id << endl;
+                
+                // Print the bases
+                auto it_p = vertex_to_base.find(p->id);
+                auto it_c = vertex_to_base.find(c->id);
+                if (it_p != vertex_to_base.end()) {
+                    cout << "p base: " << (int)it_p->second << endl;
+                } else {
+                    cout << "p base: not found (internal node)" << endl;
+                }
+                if (it_c != vertex_to_base.end()) {
+                    cout << "c base: " << (int)it_c->second << endl;
+                } else {
+                    cout << "c base: not found (internal node)" << endl;
+                }
+                
+                // Print transition matrix
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        cout << "c->transitionMatrix[" << i << "," << j << "] = " 
+                             << c->transitionMatrix[i][j] << endl;
+                    }
+                }
+                
+                throw mt_error("Largest conditional likelihood value is zero");
+            }
+        }
+        
+        // Compute site likelihood at root
+        siteLikelihood = 0.0;
+        const auto& rootCL = conditionalLikelihoodMap.at(this->root);
+        for (int dna = 0; dna < 4; ++dna) {
+            siteLikelihood += this->rootProbability[dna] * rootCL[dna];
+        }
+        if (siteLikelihood <= 0.0) {
+            throw mt_error("siteLikelihood <= 0");
+        }
+        
+        // Add weighted site log-likelihood
+        int weight = pattern_weights[pattern_idx];
+        this->logLikelihood += (this->root->logScalingFactors + log(siteLikelihood)) * weight;
+    }
 }
 
 string SEM::EncodeAsDNA(vector<int> sequence){
@@ -5581,12 +6007,15 @@ void SEM::SetF81_mu() {
     // guard against pathological S2≈1 when probability is a point mass
     const double denom = std::max(1e-14, 1.0 - S2);
     this->F81_mu = 1.0 / denom;
+	cout << "F81 mu is " << this->F81_mu << endl;
 }
 
 void SEM::SetF81Matrix(SEM_vertex* v) {	
     // fetch branch length t (as expected subs/site)
-    const double t = this->edgeLengths[make_pair(min(v->parent, v),max(v->parent, v))];
+    double t = this->GetLengthOfSubtendingBranch(v);
+	// base composition π
 	array <double, 4> pi = this->rootProbability; // pi[0..3] = {A,C,G,T}
+	assert (t > 0);
     const double e = exp(-this->F81_mu * t);
 
     for (int i = 0; i < 4; ++i) {
@@ -5604,6 +6033,7 @@ void SEM::SetF81Matrix(SEM_vertex* v) {
 
 void SEM::SetF81Model(string baseCompositionFileName) {
 	this->SetF81_mu();
+	cout << "number of non-root vertices is " << this->non_root_vertices.size() << endl;
 	for (SEM_vertex * v: this->non_root_vertices) SetF81Matrix(v);
 }
 
@@ -5805,28 +6235,6 @@ void SEM::SetDNASequencesFromFile(string sequenceFileName) {
 	inputFile.close(); 
 }
 
-
-void SEM::AddWeightedEdges(vector <tuple <string,string,double> > weightedEdgesToAdd) {
-	SEM_vertex * u; SEM_vertex * v;
-	string u_name; string v_name; double t;
-	vector <int> emptySequence;
-	int edge_count_h1 = 0;
-	for (tuple <string, string, double> weightedEdge : weightedEdgesToAdd) {
-		tie (u_name, v_name, t) = weightedEdge;
-		if (!this->ContainsVertex(u_name)) this->AddVertex(u_name, emptySequence);
-		if (!this->ContainsVertex(v_name)) this->AddVertex(v_name, emptySequence);
-		u = this->GetVertex(u_name); v = this->GetVertex(v_name);		
-		
-		u->AddNeighbor(v);
-		v->AddNeighbor(u);
-		if (u->id < v->id) {
-			this->edgeLengths.insert(make_pair(make_pair(u,v),t));
-		} else {
-			this->edgeLengths.insert(make_pair(make_pair(v,u),t));
-		}
-	}
-}
-
 void SEM::AddEdgeLogLikelihoods(vector<tuple<string,string,double>> edgeLogLikelihoodsToAdd) {
 	SEM_vertex * u; SEM_vertex * v; double edgeLogLikelihood;
 	string u_name; string v_name;
@@ -5861,17 +6269,15 @@ void SEM::AddVertex(string u_name, vector <int> emptySequence) {
 
 EMBH::EMBH(const string edge_list_file_name,
 		   const string fasta_file_name,
-    	   const string pattern_file_name,	     
+    	   const string pattern_file_name,
+		     const string taxon_order_file_name,
            const string base_composition_file_name,
            const string root_optim_name,
            const string root_check_name) {
-		this->prefix_for_output_files = "";
-		this->supertree_method = "";
-		this->verbose = 0;
-		this->flag_topology = 1;
+		this->prefix_for_output_files = "";		
+		this->verbose = 0;		
 		this->max_EM_iter = max_iter;
 		this->SetDNAMap();
-		this->ancestralSequencesString = "";
 
 		this->P = new SEM(0.0,100,this->verbose);
 		this->P->SetDNASequencesFromFile(fasta_file_name);
@@ -5891,15 +6297,24 @@ EMBH::EMBH(const string edge_list_file_name,
 		// [] set F81 model
 		this->P->SetF81Model(base_composition_file_name); // assign transition probabilities
 		// [] compute log-likelihood score using pruning algorithm with fasta input
+		cout << "\n=== Computing log-likelihood using compressed sequences ===" << endl;
 		this->P->ComputeLogLikelihood();
-		cout << "log-likelihood using pruning algorithm and compressed sequences is " << this->P->logLikelihood << endl;
+		cout << "log-likelihood using pruning algorithm and compressed sequences is " << this->P->logLikelihood << endl;		
+
+		if (!pattern_file_name.empty() && !taxon_order_file_name.empty()) {
+			cout << "\n=== Computing log-likelihood using packed patterns ===" << endl;
+			this->P->ReadPatternsFromFile(pattern_file_name, taxon_order_file_name);
+			this->P->ComputeLogLikelihoodUsingPatterns();
+			cout << "log-likelihood using pruning algorithm and packed patterns is " 
+			     << this->P->logLikelihood << endl;
+		}
 		// [] compute log-likelihood score using pruning algorithm with pattern input
 		// [] compute log-likelihood score using propagation algorithm with pattern input
 		/* [] reuse messages for branch patterns and compute log-likelihood
 		 using propagation algorithm with */
-		// the following is for BH model
+		// the following is for BH modelgre
 		SEM_vertex * root_check = this->P->GetVertex(root_check_name);
-		// set root estimate and root test		
+		// set root estimate and root test
 		}
 
 		EMBH::~EMBH() {			

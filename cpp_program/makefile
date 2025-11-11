@@ -96,7 +96,11 @@ run: $(TARGET)
 
 .Phony: test
 test: 
-	$(TARGET) -e $(DATADIR)/RAxML_bipartitions.CDS_FcC_partition.edgelist -f $(DATADIR)/CDS_FcC_1000.fas -p $(DATADIR)/patterns_1000.pat -b $(DATADIR)/patterns_1000.basecomp -o h_0 -c h_5
+	$(TARGET) -e $(DATADIR)/RAxML_bipartitions.CDS_FcC_partition.edgelist -f $(DATADIR)/CDS_FcC_1000.fas -p $(DATADIR)/patterns_1000.pat -x $(DATADIR)/patterns_1000.taxon_order -b $(DATADIR)/patterns_1000.basecomp -o h_0 -c h_5
+
+.Phony: test_2k
+test_2k: 
+	$(TARGET) -e $(DATADIR)/RAxML_bipartitions.CDS_FcC_partition.edgelist -f $(DATADIR)/CDS_FcC_2000.fas -p $(DATADIR)/patterns_2000.pat -x $(DATADIR)/patterns_2000.taxon_order -b $(DATADIR)/patterns_2000.basecomp -o h_0 -c h_5
 
 # Debug build
 .PHONY: debug
