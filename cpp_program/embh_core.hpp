@@ -32,7 +32,7 @@ struct mt_error : runtime_error {
 };
 
 
-class EMBH
+class manager
 {
 private:
 	vector <string> sequenceNames;
@@ -78,7 +78,7 @@ private:
 	double conv_thresh;
     public:	
 	
-    EMBH(const string EdgeListFileNameToSet,
+    manager(const string EdgeListFileNameToSet,
 		 const string FastaFileNameToSet,
 	     const string PatternListFileNameToSet,
 		 const string TaxonOrderFileNameToSet,
@@ -86,7 +86,7 @@ private:
 		 const string RootEstimateToSet,
 		 const string RootTestToSet
 		);
-	~EMBH();
+	~manager();
 
 	double max_log_lik;
 	double max_log_lik_pars;
