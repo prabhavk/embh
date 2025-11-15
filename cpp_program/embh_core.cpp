@@ -1489,6 +1489,7 @@ public:
 	void EM_DNA_rooted_at_each_internal_vertex_started_with_parsimony_store_results(int num_repetitions);
 	void EM_DNA_rooted_at_each_internal_vertex_started_with_HSS_store_results(int num_repetitions);
 	void EMTrifle_DNA_for_replicate(int replicate);
+	void embh_aitken();
 	void EMTrifle_DNA_rooted_at_each_internal_vertex_started_with_parsimony_store_results();
 	void EMtrifle_DNA_rooted_at_each_internal_vertex_started_with_dirichlet_store_results();
 	void EMtrifle_DNA_rooted_at_each_internal_vertex_started_with_HSS_store_results();	
@@ -2470,7 +2471,7 @@ void SEM::WriteRootedTreeAsEdgeList(string fileName) {
 }
 
 void SEM::RootTreeAtAVertexPickedAtRandom() {
-	cout << "num of observed vertices is " << this->numberOfObservedVertices << endl;	
+	cout << "num of observed vertices is " << this->numberOfObservedVertices << endl;
 	int n = this->numberOfObservedVertices;
 	uniform_int_distribution <int> distribution_v(n,(2*n-3));
 	int v_ind = distribution_v(generator);
@@ -2479,7 +2480,7 @@ void SEM::RootTreeAtAVertexPickedAtRandom() {
 	SEM_vertex * v = (*this->vertexMap)[v_ind];
 	cout << "vertex selected for rooting is " << v->id << endl;
 	this->RootTreeAtVertex(v);
-	
+
 }
 
 void SEM::RootTreeAlongAnEdgePickedAtRandom() {
@@ -4186,6 +4187,168 @@ void SEM::EMTrifle_DNA_for_replicate(int rep) {
 		// cout << this->emtrifle_to_json(this->EMTrifle_current) << endl;
 		// cout << "[EM_Trifle] " << this->emtrifle_to_json(this->EMTrifle_current) << endl;
 	}
+}
+
+
+void SEM::embh_aitken() {
+    // ============================================================================
+    // IMPROVED AITKEN ACCELERATION FOR EM CONVERGENCE
+    // Uses F81 model as initial parameters
+    // Disables Aitken when rate factor becomes unreliable (> 0.95)
+    // ============================================================================
+
+    const int MAX_ITERATIONS = 100;
+    const double MAX_RELIABLE_RATE = 0.95;     // Aitken unreliable above this
+    const int MIN_ITER_FOR_AITKEN = 3;         // Need 3 points for Aitken
+
+    // Compute number of sites (sum of pattern weights)
+    int num_sites = 0;
+    for (int w : this->DNAPatternWeights) {
+        num_sites += w;
+    }
+
+    // Tolerance: 1e-5 log-likelihood units per site
+    const double PER_SITE_TOLERANCE = 1e-5;
+    const double TOLERANCE = PER_SITE_TOLERANCE * num_sites;
+
+    this->maxIter = MAX_ITERATIONS;
+
+    // Compute initial TRUE log-likelihood using propagation algorithm
+    this->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+    double ll_0 = this->logLikelihood;
+
+    cout << "\n====================================================" << endl;
+    cout << "EM with Aitken Acceleration (F81 initialization)" << endl;
+    cout << "====================================================" << endl;
+    cout << "Initial LL: " << fixed << setprecision(2) << ll_0 << endl;
+    cout << "Number of sites: " << num_sites << endl;
+    cout << "Convergence tolerance: " << scientific << setprecision(2) << TOLERANCE
+         << " (" << PER_SITE_TOLERANCE << " per site)" << endl;
+    cout << string(70, '-') << endl;
+
+    // Variables for Aitken acceleration
+    double ll_prev_prev = ll_0;  // LL at n-1
+    double ll_prev = ll_0;       // LL at n
+    double ll_curr = ll_0;       // LL at n+1
+
+    int final_iter = 0;
+    bool converged = false;
+    string convergence_reason = "";
+
+    this->ConstructCliqueTree();
+
+    for (int iter = 1; iter <= MAX_ITERATIONS; iter++) {
+        final_iter = iter;
+
+        // E-step: Compute expected counts
+        this->ComputeExpectedCounts();
+        this->ComputeMarginalProbabilitiesUsingExpectedCounts();
+
+        // M-step: Update parameters
+        this->ComputeMLEstimateOfBHGivenExpectedDataCompletion();
+
+        // Compute new log-likelihood
+        this->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+        ll_curr = this->logLikelihood;
+
+        double improvement = ll_curr - ll_prev;
+
+        // Compute Aitken estimate (if applicable)
+        bool use_aitken = false;
+        double aitken_ll = ll_curr;
+        double aitken_distance = 0.0;
+        double rate_factor = 0.0;
+
+        if (iter >= MIN_ITER_FOR_AITKEN) {
+            double delta1 = ll_prev - ll_prev_prev;      // Δ_n
+            double delta2 = ll_curr - ll_prev;           // Δ_{n+1}
+            double denominator = delta2 - delta1;
+
+            // Compute rate factor
+            if (fabs(delta1) > 1e-12) {
+                rate_factor = fabs(delta2 / delta1);
+            }
+
+            // Only use Aitken if:
+            // 1. Denominator is not too small (numerical stability)
+            // 2. Rate factor is reasonable (< 0.95)
+            // 3. We have valid deltas
+            if (fabs(denominator) > 1e-10 &&
+                rate_factor > 0.01 &&
+                rate_factor < MAX_RELIABLE_RATE) {
+
+                // Aitken acceleration formula
+                aitken_ll = ll_curr - (delta2 * delta2) / denominator;
+                aitken_distance = fabs(aitken_ll - ll_curr);
+                use_aitken = true;
+            }
+        }
+
+        // Display iteration info
+        cout << "Iter " << setw(3) << iter << ": LL = "
+             << fixed << setprecision(2) << ll_curr
+             << " (+" << scientific << setprecision(2) << improvement << ")";
+
+        if (use_aitken) {
+            cout << " | Rate: " << fixed << setprecision(3) << rate_factor
+                 << " | Aitken LL: " << fixed << setprecision(2) << aitken_ll
+                 << " | Dist: " << scientific << setprecision(2) << aitken_distance;
+        } else if (iter >= MIN_ITER_FOR_AITKEN) {
+            cout << " | Rate: " << fixed << setprecision(3) << rate_factor
+                 << " | Aitken: disabled (rate too high)";
+        }
+        cout << endl;
+
+        // Convergence check
+        if (use_aitken && aitken_distance < TOLERANCE) {
+            converged = true;
+            convergence_reason = "Aitken criterion (distance < " +
+                                to_string(TOLERANCE) + ")";
+        } else if (improvement < TOLERANCE) {
+            converged = true;
+            convergence_reason = "Standard criterion (improvement < " +
+                                to_string(TOLERANCE) + ")";
+        } else if (improvement < 0) {
+            cout << "WARNING: Likelihood decreased! Stopping." << endl;
+            converged = true;
+            convergence_reason = "Likelihood decrease detected";
+        }
+
+        if (converged) {
+            break;
+        }
+
+        // Update for next iteration
+        ll_prev_prev = ll_prev;
+        ll_prev = ll_curr;
+
+        if (iter == MAX_ITERATIONS) {
+            convergence_reason = "Maximum iterations reached";
+        }
+    }
+
+    // ============================================================================
+    // FINALIZATION
+    // ============================================================================
+
+    cout << string(70, '-') << endl;
+    if (converged) {
+        cout << "Converged after " << final_iter << " iterations" << endl;
+        cout << "Reason: " << convergence_reason << endl;
+    } else {
+        cout << "Reached maximum iterations (" << MAX_ITERATIONS << ")" << endl;
+    }
+
+    cout << "\n====================================================" << endl;
+    cout << "Final Results:" << endl;
+    cout << "  Initial LL:  " << fixed << setprecision(2) << ll_0 << endl;
+    cout << "  Final LL:    " << fixed << setprecision(2) << this->logLikelihood << endl;
+    cout << "  Improvement: " << fixed << setprecision(2)
+         << (this->logLikelihood - ll_0) << endl;
+    cout << "  Iterations:  " << final_iter << endl;
+    cout << "  LL/site:     " << fixed << setprecision(6)
+         << (this->logLikelihood / num_sites) << endl;
+    cout << "====================================================" << endl;
 }
 
 
@@ -6492,10 +6655,7 @@ manager::manager(const string edge_list_file_name,
 			cout << "\n=== Computing log-likelihood using propagation algorithm with patterns ===" << endl;
 			this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
 			cout << "log-likelihood using propagation algorithm and packed patterns is "
-			     << setprecision(11) << this->P->logLikelihood << endl;
-
-			// Compare pruning and propagation algorithms
-			this->CompareAlgorithms(false);
+			     << setprecision(11) << this->P->logLikelihood << endl;			
 		}
 		// [] compute log-likelihood score using pruning algorithm with pattern input
 		// [] compute log-likelihood score using propagation algorithm with pattern input
@@ -6577,6 +6737,19 @@ void manager::EvaluateLogLikelihoodWithPropagation() {
         cerr << "Error: SEM object not initialized" << endl;
         return;
     }
+
+}
+
+void manager::RunEMWithAitken() {
+    if (this->P == nullptr) {
+        cerr << "Error: SEM object not initialized" << endl;
+        return;
+    }
+
+    cout << "\n=== Running EM with Aitken Acceleration ===" << endl;
+    this->P->embh_aitken();
+    this->max_log_lik = this->P->logLikelihood;
+    cout << "\nFinal maximum log-likelihood: " << setprecision(14) << this->max_log_lik << endl;
 
     cout << "Evaluating log-likelihood using propagation algorithm with patterns..." << endl;
     this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
