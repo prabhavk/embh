@@ -101,4 +101,5 @@ private:
     void EMhss();
     void CompareAlgorithms(bool verbose = false);
     void EvaluateLogLikelihoodWithPropagation();
+    void RunEMWithAitken();
 };

@@ -71,16 +71,19 @@ int main(int argc, char* argv[]) {
         string(root_check_name)
     );
 
+    // Run EM with Aitken acceleration using F81 initial parameters
+    embh_obj->RunEMWithAitken();
+
     delete embh_obj;
 
     // create object of class EMBH
-    
+
     // define F81 model
 
     // Compute log likelihood of F81 model with fasta sequences as input
 
     // Compute log likelihood of F81 model with patterns as input
 
-    
+
     return 0;
 }
