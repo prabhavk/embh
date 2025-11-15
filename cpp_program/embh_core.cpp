@@ -1,5 +1,5 @@
 #include "embh_core.hpp"
-#include "embh_utils.hpp"
+// #include "embh_utils.hpp"
 
 #include <map>
 #include <algorithm>
@@ -24,7 +24,52 @@
 #include <tuple>
 
 
-using namespace std; 
+using namespace std;
+
+
+namespace emtr {  
+    
+    // ---------- 4x4 helpers ----------
+    using Md = std::array<std::array<double,4>,4>;
+
+    inline std::mt19937_64& rng() {
+        static thread_local std::mt19937_64 g{0xC0FFEEULL};
+        return g;
+    }
+
+    inline bool starts_with(const std::string& str, const std::string& prefix) {
+        return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    inline std::pair<int,int> ord_pair(int a, int b) {
+        return (a < b) ? std::make_pair(a,b) : std::make_pair(b,a);
+    }
+
+    inline std::vector<std::string> split_ws(const std::string& s) {
+        std::istringstream iss(s);
+        std::vector<std::string> out;
+        for (std::string tok; iss >> tok;) out.push_back(tok);
+        return out;
+    }
+
+    inline Md MT(const Md& P) {
+        Md Pt{};
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                Pt[j][i] = P[i][j];
+        return Pt;
+    }
+
+    inline Md MM(const Md& A, const Md& B) {
+        Md R{};
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                for (int k = 0; k < 4; ++k)
+                    R[i][j] += A[i][k] * B[k][j];
+        return R;
+    }  
+}
+
 using namespace emtr;
 
 
@@ -3732,19 +3777,6 @@ void SEM::EM_DNA_rooted_at_each_internal_vertex_started_with_dirichlet_store_res
             const double loglikelihood_ecd_first = std::get<2>(tup);
             const double loglikelihood_ecd_final = std::get<3>(tup);
             const double logLikelihood_final     = std::get<4>(tup);
-
-			emtr::push_result(
-                this->EMTR_results,                 // vector<tuple<string,string,int,int,double,double,double,double>>
-                "dirichlet",                        // init_method
-                v->name,                            // root
-                rep + 1,                            // repetition (1-based)
-                iter,
-                logLikelihood_diri,                 // ll_initial
-                loglikelihood_ecd_first,
-                loglikelihood_ecd_final,
-                logLikelihood_final
-            );
-
 			if (this->max_log_likelihood_diri < logLikelihood_final) {				
 				this->max_log_likelihood_diri = logLikelihood_final;				
 				if (this->max_log_likelihood_best < this->max_log_likelihood_diri) {
@@ -4075,19 +4107,6 @@ void SEM::EM_DNA_rooted_at_each_internal_vertex_started_with_parsimony_store_res
             const double logLikelihood_final     = std::get<4>(tup);
 			// cout << "initial " << logLikelihood_pars << "iter " << iter << endl;
 			// cout << "final " << logLikelihood_final << "iter " << iter << endl;
-
-			emtr::push_result(
-                this->EMTR_results,                 // vector<tuple<string,string,int,int,double,double,double,double>>
-                "parsimony",                        // init_method
-                v->name,                            // root
-                rep + 1,                            // repetition (1-based)
-                iter,
-                logLikelihood_pars,                 // ll_initial
-                loglikelihood_ecd_first,
-                loglikelihood_ecd_final,
-                logLikelihood_final
-            );
-
 			if (this->max_log_likelihood_pars < logLikelihood_final) {				
 				this->max_log_likelihood_pars = logLikelihood_final;				
 				if (this->max_log_likelihood_best < this->max_log_likelihood_pars) {
@@ -4213,20 +4232,6 @@ void SEM::EM_DNA_rooted_at_each_internal_vertex_started_with_HSS_store_results(i
             const double loglikelihood_ecd_first = std::get<2>(tup);
             const double loglikelihood_ecd_final = std::get<3>(tup);
             const double logLikelihood_final     = std::get<4>(tup);
-
-			emtr::push_result(
-                this->EMTR_results,
-                "hss",
-                v->name,
-                rep + 1,
-                iter,
-                logLikelihood_hss,
-                loglikelihood_ecd_first,
-                loglikelihood_ecd_final,
-                logLikelihood_final
-            );
-
-
 			if (this->max_log_likelihood_hss < logLikelihood_final) {				
 				this->max_log_likelihood_hss = logLikelihood_final;				
 				if (this->max_log_likelihood_best < this->max_log_likelihood_hss) {
@@ -6282,31 +6287,33 @@ EMBH::EMBH(const string edge_list_file_name,
 		this->P = new SEM(0.0,100,this->verbose);
 		this->P->SetDNASequencesFromFile(fasta_file_name);
 		this->P->CompressDNASequences();
-		
+		this->P->SetEdgesFromTopologyFile(edge_list_file_name);
 		this->P->SetVertexVector();
+		SEM_vertex * root_optim = this->P->GetVertex(root_optim_name);
+		this->P->RootTreeAtVertex(root_optim);
 		this->P->SetVertexVectorExceptRoot();
-				
+		cout << "Number of non-root vertices is " << this->P->non_root_vertices.size() << endl;		
 		cout << "Number of unique site patterns is " << this->P->num_dna_patterns << endl;
 
-		this->P->SetEdgesFromTopologyFile(edge_list_file_name);
+		
 		// set root probability as sample base composition
 		this->P->SetRootProbabilityAsSampleBaseComposition(base_composition_file_name);
 		// define F81 model using base composition file
-		SEM_vertex * root_optim = this->P->GetVertex(root_optim_name);
-		this->P->RootTreeAtVertex(root_optim);
+		
+		
 		// [] set F81 model
 		this->P->SetF81Model(base_composition_file_name); // assign transition probabilities
 		// [] compute log-likelihood score using pruning algorithm with fasta input
 		cout << "\n=== Computing log-likelihood using compressed sequences ===" << endl;
 		this->P->ComputeLogLikelihood();
-		cout << "log-likelihood using pruning algorithm and compressed sequences is " << this->P->logLikelihood << endl;		
+		cout << "log-likelihood using pruning algorithm and compressed sequences is " << setprecision(10) << this->P->logLikelihood << endl;
 
 		if (!pattern_file_name.empty() && !taxon_order_file_name.empty()) {
 			cout << "\n=== Computing log-likelihood using packed patterns ===" << endl;
 			this->P->ReadPatternsFromFile(pattern_file_name, taxon_order_file_name);
 			this->P->ComputeLogLikelihoodUsingPatterns();
-			cout << "log-likelihood using pruning algorithm and packed patterns is " 
-			     << this->P->logLikelihood << endl;
+			cout << "log-likelihood using pruning algorithm and packed patterns is "
+			     << setprecision(20) << this->P->logLikelihood << endl;
 		}
 		// [] compute log-likelihood score using pruning algorithm with pattern input
 		// [] compute log-likelihood score using propagation algorithm with pattern input

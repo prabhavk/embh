@@ -1,0 +1,78 @@
+
+RAxML-NG v. 1.2.2-master released on 30.04.2024 by The Exelixis Lab.
+Developed by: Alexey M. Kozlov and Alexandros Stamatakis.
+Contributors: Diego Darriba, Tomas Flouri, Benoit Morel, Sarah Lutteropp, Ben Bettisworth, Julia Haag, Anastasis Togkousidis.
+Latest version: https://github.com/amkozlov/raxml-ng
+Questions/problems/suggestions? Please visit: https://groups.google.com/forum/#!forum/raxml
+
+System: Intel(R) Core(TM) i5-14400, 10 cores, 31 GB RAM (allocated: 8 physical cores)
+
+RAxML-NG was called at 15-Nov-2025 10:38:39 as follows:
+
+raxml-ng --evaluate --msa /home/pk/projects/embh/cpp_program/data/CDS_FcC_1000.fas --tree /home/pk/projects/embh/cpp_program/data/RAxML_bipartitions.CDS_FcC_partition --model GTR{1.3409880003/1.3409880003/1.3409880003/1.3409880003/1.3409880003/1.3409880003}+FU{0.2876752105/0.1976084259/0.2594303513/0.2552860122} --prefix /home/pk/projects/embh/cpp_program/f81_eval --threads 1 --opt-model off --opt-branches off --redo
+
+Analysis options:
+  run mode: Evaluate tree likelihood
+  start tree(s): user
+  random seed: 1763183319
+  tip-inner: OFF
+  pattern compression: ON
+  per-rate scalers: OFF
+  site repeats: ON
+  logLH epsilon: general: 0.100000, brlen-triplet: 1000.000000
+  branch lengths: proportional (user-specified)
+  SIMD kernels: AVX2
+  parallelization: coarse-grained (auto), NONE/sequential
+
+WARNING: Running in REDO mode: existing checkpoints are ignored, and all result files will be overwritten!
+
+[00:00:00] Reading alignment from file: /home/pk/projects/embh/cpp_program/data/CDS_FcC_1000.fas
+[00:00:00] Loaded alignment with 38 taxa and 1000 sites
+
+Alignment comprises 1 partitions and 648 patterns
+
+Partition 0: noname
+Model: GTR{1/1/1/1/1/1}+FU{0.287675/0.197608/0.25943/0.255286}
+Alignment sites / patterns: 1000 / 648
+Gaps: 0.31 %
+Invariant sites: 35.40 %
+
+
+NOTE: Binary MSA file created: /home/pk/projects/embh/cpp_program/f81_eval.raxml.rba
+
+Parallelization scheme autoconfig: 1 worker(s) x 1 thread(s)
+
+[00:00:00] Loading user starting tree(s) from: /home/pk/projects/embh/cpp_program/data/RAxML_bipartitions.CDS_FcC_partition
+Parallel reduction/worker buffer size: 1 KB  / 0 KB
+
+[00:00:00] Data distribution: max. partitions/sites/weight per thread: 1 / 648 / 2592
+[00:00:00] Data distribution: max. searches per worker: 1
+
+Evaluating 1 trees
+
+
+[00:00:00] Tree #1, final logLikelihood: -19310.063115
+
+
+Optimized model parameters:
+
+   Partition 0: noname
+   Rate heterogeneity: NONE
+   Base frequencies (user): 0.287675 0.197608 0.259430 0.255286 
+   Substitution rates (user): 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 
+
+
+Final LogLikelihood: -19310.063115
+
+AIC score: 38766.126229 / AICc score: 38777.793616 / BIC score: 39124.392365
+Free parameters (model + branch lengths): 73
+
+Best ML tree saved to: /home/pk/projects/embh/cpp_program/f81_eval.raxml.bestTree
+Optimized model saved to: /home/pk/projects/embh/cpp_program/f81_eval.raxml.bestModel
+
+Execution log saved to: /home/pk/projects/embh/cpp_program/f81_eval.raxml.log
+
+Analysis started: 15-Nov-2025 10:38:39 / finished: 15-Nov-2025 10:38:39
+
+Elapsed time: 0.029 seconds
+
