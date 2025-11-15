@@ -1,5 +1,4 @@
 #include "embh_core.hpp"
-// #include "embh_utils.hpp"
 
 #include <map>
 #include <algorithm>
@@ -6270,9 +6269,9 @@ void SEM::AddVertex(string u_name, vector <int> emptySequence) {
 	this->nameToIdMap.insert(make_pair(u->name,u->id));	
 }
 
-///...///...///...///...///...///...///... EMBH ///...///...///...///...///...///...///...///...///
+///...///...///...///...///...///...///... manager ///...///...///...///...///...///...///...///...///
 
-EMBH::EMBH(const string edge_list_file_name,
+manager::manager(const string edge_list_file_name,
 		   const string fasta_file_name,
     	   const string pattern_file_name,
 		     const string taxon_order_file_name,
@@ -6324,11 +6323,11 @@ EMBH::EMBH(const string edge_list_file_name,
 		// set root estimate and root test
 		}
 
-		EMBH::~EMBH() {			
+		manager::~manager() {			
 			delete this->P;		
 		}
 
-	void EMBH::EM_main() {
+	void manager::EM_main() {
 	this->num_repetitions = this->P->num_repetitions;
 	this->P->max_log_likelihood_best = -1 * std::pow(10.0, 10.0);
 
@@ -6340,7 +6339,7 @@ EMBH::EMBH(const string edge_list_file_name,
 }
 
 
-void EMBH::EMparsimony() {
+void manager::EMparsimony() {
     cout << "Starting EM with initial parameters set using parsimony" << endl;
 	this->P->probabilityFileName_pars = this->prefix_for_output_files + ".pars_prob";
 	this->probabilityFileName_pars = this->prefix_for_output_files + ".pars_prob";
@@ -6348,14 +6347,14 @@ void EMBH::EMparsimony() {
 }
 
 
-void EMBH::EMdirichlet() {	
+void manager::EMdirichlet() {	
 	cout << "Starting EM with initial parameters set using Dirichlet" << endl;
 	this->P->probabilityFileName_diri = this->prefix_for_output_files + ".diri_prob";
 	this->probabilityFileName_diri = this->prefix_for_output_files + ".diri_prob";
 	this->P->EM_rooted_at_each_internal_vertex_started_with_dirichlet(this->num_repetitions);
 }
 
-void EMBH::SetprobFileforHSS() {
+void manager::SetprobFileforHSS() {
 	if (this->max_log_lik_pars > this->max_log_lik_diri) {
 		cout << "Initializing with Parsimony yielded higher log likelihood score" << endl;
 		this->probabilityFileName_best = this->probabilityFileName_pars;
@@ -6365,7 +6364,7 @@ void EMBH::SetprobFileforHSS() {
 	}
 }
 
-void EMBH::EMhss() {
+void manager::EMhss() {
 	this->SetprobFileforHSS();
 	cout << "Starting EM with initial parameters set using Bayes rule as described in HSS paper" << endl;
 	this->P->probabilityFileName_best = this->probabilityFileName_best;	
@@ -6374,7 +6373,7 @@ void EMBH::EMhss() {
     this->P->EM_rooted_at_each_internal_vertex_started_with_HSS_par(this->num_repetitions);
 }
 
-void EMBH::SetDNAMap() {
+void manager::SetDNAMap() {
 	this->mapDNAtoInteger["A"] = 0;
 	this->mapDNAtoInteger["C"] = 1;
 	this->mapDNAtoInteger["G"] = 2;

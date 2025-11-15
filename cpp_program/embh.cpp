@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
     printf("root optimize name is: %s\n", root_optimize_name);
     printf("root check name is: %s\n", root_check_name);
 
-    EMBH * embh_obj = new EMBH(
+    manager * embh_obj = new manager(
         string(edge_list_file_name),
         string(fasta_file_name),
         string(pattern_file_name),

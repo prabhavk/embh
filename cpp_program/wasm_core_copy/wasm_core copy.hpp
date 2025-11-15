@@ -36,7 +36,7 @@ struct mt_error : runtime_error {
 };
 
 
-class EMBH
+class manager
 {
 private:
 	// bool LoadRateMatrixFromFile(const std::string& path);
@@ -106,10 +106,10 @@ private:
     public:
 	void setDayhoffMatrixPath(const std::string& path);
 	
-    EMBH(const string DNAsequenceFileNameToSet,            
+    manager(const string DNAsequenceFileNameToSet,            
 	 		  const string AAsequenceFileNameToSet,
 			  const std::string& parameters_json);
-	~EMBH();
+	~manager();
 	double max_log_lik;
 	double max_log_lik_pars;
 	double max_log_lik_diri;
