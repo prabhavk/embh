@@ -93,10 +93,12 @@ private:
 	double max_log_lik_diri;
 	double max_log_lik_ssh;
 	string parameters_json;
-	void SetDNAMap();	
-	void EM_main();		
+	void SetDNAMap();
+	void EM_main();
     void EMparsimony();
 	void EMdirichlet();
 	void SetprobFileforHSS();
-    void EMhss();		
+    void EMhss();
+    void CompareAlgorithms(bool verbose = false);
+    void EvaluateLogLikelihoodWithPropagation();
 };
