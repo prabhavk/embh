@@ -1,0 +1,164 @@
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    PROPAGATION ALGORITHM COMPARISON                      │
+│                         Architecture Diagram                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              ┌─────────────┐
+                              │   main()    │
+                              │  embh.cpp   │
+                              └──────┬──────┘
+                                     │
+                                     │ creates
+                                     ▼
+                         ┌──────────────────────┐
+                         │   manager object     │
+                         │   (embh_core.cpp)    │
+                         └──────────┬───────────┘
+                                    │
+                                    │ calls
+                                    ▼
+                    ┌──────────────────────────────┐
+                    │ manager::CompareAlgorithms() │
+                    └──────────────┬───────────────┘
+                                   │
+                                   │ calls
+                                   ▼
+        ┌─────────────────────────────────────────────────────┐
+        │ SEM::ComparePruningAndPropagationOnPatterns()       │
+        │                                                     │
+        │  ┌────────────────┐        ┌────────────────────┐ │
+        │  │  ALGORITHM 1   │        │   ALGORITHM 2      │ │
+        │  │    PRUNING     │        │   PROPAGATION      │ │
+        │  │  (Felsenstein) │        │ (Belief Prop)      │ │
+        │  └────────┬───────┘        └────────┬───────────┘ │
+        │           │                         │             │
+        │           │ calls                   │ calls       │
+        │           ▼                         ▼             │
+        │  ┌───────────────────┐   ┌──────────────────────┐│
+        │  │ ComputeLogLik...  │   │ ComputeLogLik...     ││
+        │  │ UsingPatterns()   │   │ UsingPatterns...     ││
+        │  │                   │   │ WithPropagation()    ││
+        │  └───────────────────┘   └──────────────────────┘│
+        │           │                         │             │
+        │           │                         │             │
+        │           ▼                         ▼             │
+        │  ┌─────────────────────────────────────────────┐ │
+        │  │         Pattern-Based Data                  │ │
+        │  │  (packed_patterns, pattern_weights)         │ │
+        │  └─────────────────────────────────────────────┘ │
+        │                                                   │
+        │  Results:                                        │
+        │  • Log-likelihood (pruning)                      │
+        │  • Log-likelihood (propagation)                  │
+        │  • Time comparison                               │
+        │  • Validation (pass/fail)                        │
+        └───────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+DATA FLOW DIAGRAM:
+
+Input Files                 Processing                    Output
+───────────                 ──────────                    ──────
+
+patterns_1000.pat ──┐
+                    ├──→ ReadPatternsFromFile() ──→ packed_patterns
+taxon_order.txt ────┘                                     │
+                                                          │
+                                                          ▼
+                                              ┌──────────────────────┐
+                                              │  PRUNING ALGORITHM   │
+                                              │  • Post-order        │
+RAxML_*.edgelist ───→ SetEdgesFromTopology   │  • Conditional LL    │
+                           │                  │  • Bottom-up         │
+                           │                  └──────────┬───────────┘
+basecomp.txt ──────→ SetRootProbability                 │
+                           │                  ┌──────────▼───────────┐
+                           │                  │ PROPAGATION ALGORITHM│
+                           │                  │  • Message passing   │
+                           └──────────────────┤  • Clique tree       │
+                                              │  • Belief prop       │
+                                              └──────────┬───────────┘
+                                                         │
+                                                         ▼
+                                              ┌──────────────────────┐
+                                              │   COMPARISON         │
+                                              │  • LL difference     │
+                                              │  • Time ratio        │
+                                              │  • Validation        │
+                                              └──────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+ALGORITHM COMPARISON:
+
+┌─────────────────────┬─────────────────────┬──────────────────────────┐
+│   CHARACTERISTIC    │  PRUNING ALGORITHM  │  PROPAGATION ALGORITHM   │
+├─────────────────────┼─────────────────────┼──────────────────────────┤
+│ Method              │ Felsenstein (1981)  │ Belief Propagation       │
+│ Traversal           │ Post-order          │ Bi-directional messages  │
+│ Data structure      │ Direct tree         │ Clique tree              │
+│ Complexity          │ O(n × k²)           │ O(n × k²)                │
+│ Memory              │ Lower               │ Higher (messages)        │
+│ Typical speed       │ Faster              │ Slower (overhead)        │
+│ Generality          │ Trees only          │ Any graphical model      │
+│ Result              │ Same log-likelihood │ Same log-likelihood      │
+└─────────────────────┴─────────────────────┴──────────────────────────┘
+
+Where: n = number of patterns, k = 4 (nucleotide states)
+
+═══════════════════════════════════════════════════════════════════════════
+
+IMPLEMENTATION SUMMARY:
+
+Files Modified:
+  embh_core.hpp ───────────→ 3 method declarations added
+  embh_core.cpp ───────────→ 3 methods implemented (~200 lines)
+  embh.cpp (optional) ─────→ 1 function call added
+
+New Functions:
+  1. ComputeLogLikelihoodUsingPatternsWithPropagation()
+     Purpose: Compute LL using belief propagation
+     Location: SEM class
+     
+  2. ComparePruningAndPropagationOnPatterns()
+     Purpose: Run both algorithms and compare
+     Location: SEM class
+     
+  3. CompareAlgorithms()
+     Purpose: Manager-level wrapper
+     Location: manager class
+
+═══════════════════════════════════════════════════════════════════════════
+
+VALIDATION LOGIC:
+
+                         Start Comparison
+                               │
+                   ┌───────────┴────────────┐
+                   │                        │
+                   ▼                        ▼
+        ┌──────────────────┐    ┌──────────────────┐
+        │ Run Pruning Alg  │    │ Run Propagation  │
+        │   LL_pruning     │    │   LL_propagation │
+        └────────┬─────────┘    └────────┬─────────┘
+                 │                       │
+                 └───────────┬───────────┘
+                             │
+                             ▼
+                  Compute |LL_pruning - LL_propagation|
+                             │
+                             ▼
+                   Compare with tolerance (1e-6)
+                             │
+                ┌────────────┴────────────┐
+                │                         │
+                ▼                         ▼
+         ✓ PASSED                   ✗ FAILED
+    (difference < 1e-6)        (difference ≥ 1e-6)
+         │                           │
+         ▼                           ▼
+    Algorithms agree            Potential bug
+                                Check implementation
+
+═══════════════════════════════════════════════════════════════════════════

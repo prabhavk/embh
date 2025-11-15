@@ -1338,6 +1338,9 @@ public:
 	SEM_vertex * externalVertex;
 	void ReadPatternsFromFile(string pattern_file_name, string taxon_order_file_name);
     void ComputeLogLikelihoodUsingPatterns();
+    void ComputeLogLikelihoodUsingPatternsWithPropagation();
+    void ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+    void ComparePruningAndPropagationOnPatterns(bool verbose = false);
 	void AddArc(SEM_vertex * from, SEM_vertex * to);
 	void RemoveArc(SEM_vertex * from, SEM_vertex * to);
 	void ClearDirectedEdges();
@@ -3727,6 +3730,177 @@ void SEM::ComputeLogLikelihoodUsingPatterns() {
         int weight = pattern_weights[pattern_idx];
         this->logLikelihood += (this->root->logScalingFactors + log(siteLikelihood)) * weight;
     }
+}
+
+void SEM::ComputeLogLikelihoodUsingPatternsWithPropagation() {
+    if (this->cliqueT == nullptr) {
+        cerr << "Error: Clique tree not constructed. Call ConstructCliqueTree() first." << endl;
+        return;
+    }
+
+    // Use the already-compressed sequences (from CompressDNASequences)
+    // This matches exactly what the pruning algorithm uses
+    this->logLikelihood = 0;
+    clique* rootClique = this->cliqueT->root;
+
+    if (rootClique == nullptr) {
+        cerr << "Error: Root clique is null" << endl;
+        return;
+    }
+
+    // Iterate over compressed patterns (same as pruning algorithm)
+    for (int site = 0; site < this->num_dna_patterns; site++) {
+        // Set current site index
+        this->cliqueT->SetSite(site);
+
+        // Initialize potentials from DNAcompressed
+        this->cliqueT->InitializePotentialAndBeliefs();
+
+        // Run belief propagation (message passing)
+        this->cliqueT->CalibrateTree();
+
+        // Marginalize at root to get P(root_state | data)
+        array<double, 4> marginalAtRoot = rootClique->MarginalizeOverVariable(rootClique->x);
+
+        // Compute site likelihood: sum over root states weighted by root probabilities
+        double siteLikelihood = 0.0;
+        for (int dna = 0; dna < 4; dna++) {
+            siteLikelihood += this->rootProbability[dna] * marginalAtRoot[dna];
+        }
+
+        // Compute log-likelihood with scaling factor
+        double siteLogLikelihood = rootClique->logScalingFactorForClique + log(siteLikelihood);
+
+        // Add weighted contribution
+        this->logLikelihood += siteLogLikelihood * this->DNAPatternWeights[site];
+    }
+}
+
+void SEM::ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm() {
+    if (packed_patterns == nullptr) {
+        cerr << "Error: No patterns loaded. Call ReadPatternsFromFile() first." << endl;
+        return;
+    }
+
+    if (this->cliqueT == nullptr || this->cliqueT->root == nullptr) {
+        this->ConstructCliqueTree();
+    }
+
+    this->logLikelihood = 0;
+    clique* rootClique = this->cliqueT->root;
+
+    // Get pattern-to-taxon mapping (same as in ComputeLogLikelihoodUsingPatterns)
+    map<int, int> pattern_index_to_vertex_index;
+    for (auto& pair : *this->vertexMap) {
+        SEM_vertex* v = pair.second;
+        if (v->observed && v->pattern_index >= 0) {
+            pattern_index_to_vertex_index[v->pattern_index] = v->id;
+        }
+    }
+
+    int num_taxa = packed_patterns->get_num_taxa();
+
+    // Save original DNAcompressed data for observed vertices
+    map<SEM_vertex*, vector<int>> saved_DNAcompressed;
+    for (auto& pair : *this->vertexMap) {
+        SEM_vertex* v = pair.second;
+        if (v->observed) {
+            saved_DNAcompressed[v] = v->DNAcompressed;
+            // Resize to hold pattern data (one element per pattern)
+            v->DNAcompressed.resize(num_patterns_from_file, 4); // Initialize with gaps
+        }
+    }
+
+    // Pre-populate all patterns into DNAcompressed
+    for (int pattern_idx = 0; pattern_idx < num_patterns_from_file; pattern_idx++) {
+        vector<uint8_t> pattern = packed_patterns->get_pattern(pattern_idx);
+
+        for (int taxon_idx = 0; taxon_idx < num_taxa; taxon_idx++) {
+            auto it = pattern_index_to_vertex_index.find(taxon_idx);
+            if (it != pattern_index_to_vertex_index.end()) {
+                SEM_vertex* v = (*this->vertexMap)[it->second];
+                v->DNAcompressed[pattern_idx] = pattern[taxon_idx];
+            }
+        }
+    }
+
+    // Now iterate over each pattern using standard propagation algorithm
+    for (int pattern_idx = 0; pattern_idx < num_patterns_from_file; pattern_idx++) {
+        this->cliqueT->SetSite(pattern_idx);
+        this->cliqueT->InitializePotentialAndBeliefs();
+        this->cliqueT->CalibrateTree();
+
+        // Marginalize over child variable Y to get P(X | data) for root variable X
+        std::array<double, 4> marginalX = rootClique->MarginalizeOverVariable(rootClique->y);
+
+        // Weight by root probabilities to get P(data, X) = P(data | X) * P(X)
+        double siteLikelihood = 0.0;
+        for (int dna = 0; dna < 4; dna++) {
+            siteLikelihood += this->rootProbability[dna] * marginalX[dna];
+        }
+
+        // Combine with accumulated log scaling factors
+        double siteLogLikelihood = rootClique->logScalingFactorForClique + log(siteLikelihood);
+
+        // Use pattern weight
+        int weight = pattern_weights[pattern_idx];
+        this->logLikelihood += siteLogLikelihood * weight;
+    }
+
+    // Restore original DNAcompressed data
+    for (auto& pair : saved_DNAcompressed) {
+        pair.first->DNAcompressed = pair.second;
+    }
+}
+
+void SEM::ComparePruningAndPropagationOnPatterns(bool verbose) {
+    cout << "\n" << string(70, '=') << endl;
+    cout << "COMPARING PRUNING AND PROPAGATION ALGORITHMS" << endl;
+    cout << string(70, '=') << endl;
+
+    // Pruning algorithm (uses DNAcompressed)
+    auto start_pruning = chrono::high_resolution_clock::now();
+    this->ComputeLogLikelihood();
+    double ll_pruning = this->logLikelihood;
+    auto end_pruning = chrono::high_resolution_clock::now();
+    chrono::duration<double> time_pruning = end_pruning - start_pruning;
+
+    cout << "\nPRUNING ALGORITHM:" << endl;
+    cout << "  Log-likelihood: " << fixed << setprecision(10) << ll_pruning << endl;
+    cout << "  Time:           " << setprecision(4) << time_pruning.count() << " s" << endl;
+
+    // Build clique tree if needed
+    if (this->cliqueT == nullptr || this->cliqueT->root == nullptr) {
+        this->ConstructCliqueTree();
+    }
+
+    // Propagation algorithm
+    auto start_propagation = chrono::high_resolution_clock::now();
+    this->ComputeLogLikelihoodUsingPatternsWithPropagation();
+    double ll_propagation = this->logLikelihood;
+    auto end_propagation = chrono::high_resolution_clock::now();
+    chrono::duration<double> time_propagation = end_propagation - start_propagation;
+
+    cout << "\nPROPAGATION ALGORITHM:" << endl;
+    cout << "  Log-likelihood: " << fixed << setprecision(10) << ll_propagation << endl;
+    cout << "  Time:           " << setprecision(4) << time_propagation.count() << " s" << endl;
+
+    // Comparison
+    double difference = abs(ll_pruning - ll_propagation);
+    double tolerance = 1e-6;
+
+    cout << "\nCOMPARISON:" << endl;
+    cout << "  Difference: " << scientific << setprecision(6) << difference << endl;
+    cout << "  Speedup:    " << fixed << setprecision(2)
+         << (time_pruning.count() / time_propagation.count()) << "x" << endl;
+
+    if (difference < tolerance) {
+        cout << "  Status: PASSED (within tolerance " << scientific << tolerance << ")" << endl;
+    } else {
+        cout << "  Status: FAILED (exceeds tolerance)" << endl;
+    }
+
+    cout << string(70, '=') << endl;
 }
 
 string SEM::EncodeAsDNA(vector<int> sequence){
@@ -6305,14 +6479,23 @@ manager::manager(const string edge_list_file_name,
 		// [] compute log-likelihood score using pruning algorithm with fasta input
 		cout << "\n=== Computing log-likelihood using compressed sequences ===" << endl;
 		this->P->ComputeLogLikelihood();
-		cout << "log-likelihood using pruning algorithm and compressed sequences is " << setprecision(10) << this->P->logLikelihood << endl;
+		cout << "log-likelihood using pruning algorithm and compressed sequences is " << setprecision(11) << this->P->logLikelihood << endl;
 
 		if (!pattern_file_name.empty() && !taxon_order_file_name.empty()) {
 			cout << "\n=== Computing log-likelihood using packed patterns ===" << endl;
 			this->P->ReadPatternsFromFile(pattern_file_name, taxon_order_file_name);
 			this->P->ComputeLogLikelihoodUsingPatterns();
 			cout << "log-likelihood using pruning algorithm and packed patterns is "
-			     << setprecision(20) << this->P->logLikelihood << endl;
+			     << setprecision(11) << this->P->logLikelihood << endl;
+
+			// Compute using propagation algorithm with patterns
+			cout << "\n=== Computing log-likelihood using propagation algorithm with patterns ===" << endl;
+			this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+			cout << "log-likelihood using propagation algorithm and packed patterns is "
+			     << setprecision(11) << this->P->logLikelihood << endl;
+
+			// Compare pruning and propagation algorithms
+			this->CompareAlgorithms(false);
 		}
 		// [] compute log-likelihood score using pruning algorithm with pattern input
 		// [] compute log-likelihood score using propagation algorithm with pattern input
@@ -6378,5 +6561,25 @@ void manager::SetDNAMap() {
 	this->mapDNAtoInteger["C"] = 1;
 	this->mapDNAtoInteger["G"] = 2;
 	this->mapDNAtoInteger["T"] = 3;
+}
+
+void manager::CompareAlgorithms(bool verbose) {
+    if (this->P == nullptr) {
+        cerr << "Error: SEM object not initialized" << endl;
+        return;
+    }
+
+    this->P->ComparePruningAndPropagationOnPatterns(verbose);
+}
+
+void manager::EvaluateLogLikelihoodWithPropagation() {
+    if (this->P == nullptr) {
+        cerr << "Error: SEM object not initialized" << endl;
+        return;
+    }
+
+    cout << "Evaluating log-likelihood using propagation algorithm with patterns..." << endl;
+    this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+    cout << "Log-likelihood: " << setprecision(11) << this->P->logLikelihood << endl;
 }
 
