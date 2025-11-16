@@ -1265,7 +1265,7 @@ public:
 	void ComputeInitialEstimateOfModelParametersForTrifle(int layer);
 	void BumpZeroEntriesOfModelParameters();
 	void SetInitialEstimateOfModelParametersUsingDirichlet();
-	void SetInitialEstimateOfModelParametersUsingHSS();	
+	void SetModelParametersUsingHSS();	
 	void SwapRoot();
 	void SuppressRoot();	
 	bool root_search;

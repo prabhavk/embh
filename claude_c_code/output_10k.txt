@@ -1,0 +1,339 @@
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+EMBH C Implementation
+=====================
+Edge list file: data/tree_edges.txt
+Pattern file: data/patterns_10000.pat
+Taxon order file: data/patterns_10000.taxon_order
+Base composition file: data/patterns_10000.basecomp
+Root optimize: Nag
+Root check: Cep
+
+=== EMBH C Implementation Pipeline ===
+
+Step 1: Reading tree topology from data/tree_edges.txt
+Number of edges in topology file is 73
+  Created 74 vertices
+
+Step 2: Reading patterns from data/patterns_10000.pat
+Read 38 taxa from taxon order file
+Found 6736 patterns in file
+Number of unique site patterns is 6736
+Packed storage memory: 95988 bytes (62.50% savings)
+  Loaded 6736 patterns
+
+Step 3: Rooting tree at Nag
+  Root set to Nag (id=1)
+
+Step 4: Setting up tree structure
+Number of non-root vertices is 73
+  Number of leaves: 38
+  Number of non-root vertices: 73
+
+Step 5: Setting F81 model from data/patterns_10000.basecomp
+Root probability (pi): [0.287712, 0.191584, 0.245721, 0.274983]
+F81 mu is 1.343142
+  Root probability (pi): [0.287712, 0.191584, 0.245721, 0.274983]
+  F81 mu: 1.343142
+  Set F81 matrices for 73 edges
+
+=== Computing log-likelihood using pruning algorithm ===
+Log-likelihood (pruning): -194960.43492182449
+Time: 0.0115 seconds
+
+=== Computing log-likelihood using CUDA ===
+CUDA Device 0: NVIDIA GeForce RTX 3050
+  Compute capability: 8.6
+  Total global memory: 7839.8 MB
+  Shared memory per block: 49152 bytes
+  Max threads per block: 1024
+  Multiprocessor count: 20
+CUDA: Initializing for 6736 patterns, 38 taxa, 74 vertices, 73 edges
+CUDA: Initialization complete
+CUDA kernel execution time: 2.4371 ms
+Log-likelihood (CUDA): -194960.43492182487
+Time: 0.0874 seconds
+Difference from CPU: 3.78e-10
+CUDA result VERIFIED (matches CPU)
+CUDA speedup over CPU pruning: 0.13x
+
+=== Computing log-likelihood using CUDA with subtree memoization ===
+CUDA: Initializing subtree-level memoization...
+  Computing subtree leaves for 73 edges...
+  Total subtree leaf entries: 343 (avg 4.7 per edge)
+  Computing subtree signatures for 6736 patterns x 73 edges = 491728 pairs...
+  Building signature to cache slot mapping...
+  Found 62389 unique (edge, signature) pairs
+  Total (pattern, edge) pairs: 491728
+  Message reuse: 429339 times (87.3% reduction)
+  Allocating GPU memory for subtree memoization...
+  Subtree memoization cache: 2.14 MB
+CUDA: Subtree-level memoization initialized
+CUDA subtree-memoized kernel time: 0.9491 ms (62389 cache slots for 6736 patterns)
+Log-likelihood (CUDA subtree memo): -194960.43492182481
+Time: 0.0075 seconds
+Difference from CPU: 3.20e-10
+CUDA subtree memo result VERIFIED (matches CPU)
+Subtree memoization speedup over basic CUDA: 11.71x
+
+=== Computing log-likelihood using propagation algorithm ===
+Constructed clique tree with 73 cliques, 37 leaves
+Log-likelihood (propagation): -193802.23933645690
+Time: 0.1023 seconds
+
+=== Computing log-likelihood using MEMOIZED propagation ===
+
+=== Memoization Statistics ===
+Upward cache hits: 429334
+Upward cache misses: 55658
+Upward hit rate: 88.5%
+Downward cache hits: 32959
+Downward cache misses: 452033
+Downward hit rate: 6.8%
+Log-likelihood (memoized): -193802.23933645690
+Time: 0.6095 seconds
+
+=== Performance Comparison ===
+Pruning algorithm:     0.0115 seconds
+Propagation algorithm: 0.1023 seconds
+Memoized propagation:  0.6095 seconds
+Speedup from memoization: 0.17x (saved -0.5072 seconds)
+
+=== Running EM algorithm with Aitken acceleration ===
+
+====================================================
+EM with Aitken Acceleration
+====================================================
+Initial LL: -193802.24
+Number of sites: 10000
+Convergence tolerance: 1.00e-01 (1.00e-05 per site)
+----------------------------------------------------------------------
+Iter   1: LL = 0.00 (+1.94e+05)
+Iter   2: LL = 0.00 (+0.00e+00)
+Iter   3: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter   4: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter   5: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter   6: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter   7: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+IError: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+ter   8: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter   9: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  10: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  11: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  12: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  13: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  14: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  15: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  16: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  17: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  18: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  19: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  20: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  21: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  22: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  23: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  24: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  25: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  26: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  27: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  28: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  29: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  30: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  31: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  32: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  33: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  34: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  35: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  36: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  37: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  38: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  39: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  40: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  41: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  42: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  43: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  44: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  45: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  46: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  47: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  48: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  49: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  50: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  51: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  52: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  53: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  54: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  55: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  56: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  57: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  58: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  59: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  60: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  61: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  62: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  63: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  64: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  65: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  66: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  67: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  68: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  69: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  70: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+ItError: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: site likelihood <= 0 at pattern 0
+Error: conditional likelihood is zero at pattern 0, edge 0->1
+  Parent h_0 (id=0, observed=0, out_degree=2)
+  Child Nag (id=1, observed=1, out_degree=0)
+  Parent CL before update: [0.000000, 0.000000, 0.000000, 0.000000]
+  Child CL: [0.000000, 0.000000, 0.000000, 1.000000]
+  Child base: 3, Parent base: 4
+er  71: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  72: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  73: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  74: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  75: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  76: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  77: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  78: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  79: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  80: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  81: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  82: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  83: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  84: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  85: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  86: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  87: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  88: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  89: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  90: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  91: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  92: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  93: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  94: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  95: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  96: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  97: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  98: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter  99: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+Iter 100: LL = 0.00 (+0.00e+00) | Rate: 0.000 | Aitken: disabled
+----------------------------------------------------------------------
+Reached maximum iterations (100)
+
+====================================================
+Final Results:
+  Initial LL:  -193802.24
+  Final LL:    0.00
+  Improvement: 193802.24
+  Iterations:  100
+  LL/site:     0.000000
+====================================================
+Final log-likelihood after EM: 0.00000000000
+
+=== Evaluating BH model at root Cep ===
+Evaluating BH model at root Cep using HSS reparameterization
+Number of non-root vertices is 73
+Log-likelihood with root at Cep is 0.00000000000
+
+=== Pipeline Complete ===
+
+=== Final Results ===
+Maximum log-likelihood at Nag: 0.00000000000
+Log-likelihood at Cep: 0.00000000000
+CUDA: Subtree memoization cleanup complete
+CUDA: Cleanup complete

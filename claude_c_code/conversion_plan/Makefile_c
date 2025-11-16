@@ -1,0 +1,383 @@
+# Makefile for EMBH C Implementation
+# Includes automated validation against C++ baseline
+
+# Compiler and flags
+CC = gcc
+CFLAGS = -std=c99 -O2 -Wall -Wextra -pedantic
+CFLAGS_DEBUG = -std=c99 -O0 -g3 -Wall -Wextra -pedantic -DDEBUG
+LDFLAGS = -lm
+
+# Directories
+SRCDIR = src
+OBJDIR = obj
+BINDIR = bin
+DATADIR = data
+TESTDIR = tests
+
+# Main executable
+TARGET = $(BINDIR)/embh_c
+
+# Source files (adjust as you create them during conversion)
+SOURCES = embh_main.c \
+          embh_manager.c \
+          embh_sem.c \
+          embh_vertex.c \
+          embh_clique.c \
+          embh_pattern.c \
+          embh_utils.c \
+          embh_io.c \
+          embh_pruning.c \
+          embh_propagation.c \
+          embh_em.c
+
+# Test sources
+TEST_SOURCES = test_pattern.c \
+               test_vertex.c \
+               test_clique.c \
+               test_sem.c \
+               test_utils.c \
+               test_suite.c
+
+# Objects
+OBJECTS = $(SOURCES:%.c=$(OBJDIR)/%.o)
+TEST_OBJECTS = $(TEST_SOURCES:%.c=$(OBJDIR)/%.o)
+
+# C++ baseline for comparison
+CPP_BINARY = ../bin/embh  # Adjust path to your C++ binary
+CPP_MAKEFILE = ../makefile  # Adjust path to your C++ makefile
+
+# Test data
+EDGE_LIST = $(DATADIR)/RAxML_bipartitions.CDS_FcC_partition.edgelist
+PATTERNS = $(DATADIR)/patterns_1000.pat
+TAXON_ORDER = $(DATADIR)/patterns_1000.taxon_order
+BASE_COMP = $(DATADIR)/patterns_1000.basecomp
+ROOT_OPT = h_0
+ROOT_CHECK = h_5
+
+# Validation outputs
+CPP_BASELINE = baseline_output.txt
+C_OUTPUT = c_output.txt
+VALIDATION_SCRIPT = validate_conversion.sh
+
+# Default target
+.PHONY: all
+all: directories $(TARGET)
+
+# Create necessary directories
+.PHONY: directories
+directories:
+	@mkdir -p $(OBJDIR) $(BINDIR)
+
+# Build main executable
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	@echo "✓ Build successful: $(TARGET)"
+
+# Compile object files
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Debug build
+.PHONY: debug
+debug: CFLAGS = $(CFLAGS_DEBUG)
+debug: clean all
+	@echo "✓ Debug build complete"
+
+# Clean
+.PHONY: clean
+clean:
+	rm -rf $(OBJDIR) $(BINDIR)
+	rm -f $(C_OUTPUT) valgrind_output.txt
+	@echo "✓ Cleaned build artifacts"
+
+# Deep clean (including baseline and reports)
+.PHONY: distclean
+distclean: clean
+	rm -f $(CPP_BASELINE) validation_report.txt
+	@echo "✓ Deep clean complete"
+
+# Rebuild
+.PHONY: rebuild
+rebuild: clean all
+
+# ============================================================
+# TESTING AND VALIDATION TARGETS
+# ============================================================
+
+# Establish C++ baseline (run this FIRST before any conversion)
+.PHONY: baseline
+baseline:
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Establishing C++ Baseline"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@if [ ! -f "$(CPP_BINARY)" ]; then \
+		echo "C++ binary not found. Building..."; \
+		$(MAKE) -C .. -f $(CPP_MAKEFILE); \
+	fi
+	@echo "Running C++ baseline test..."
+	@$(CPP_BINARY) -e $(EDGE_LIST) -p $(PATTERNS) -x $(TAXON_ORDER) \
+	               -b $(BASE_COMP) -o $(ROOT_OPT) -c $(ROOT_CHECK) > $(CPP_BASELINE) 2>&1
+	@echo "✓ Baseline saved to: $(CPP_BASELINE)"
+	@echo ""
+	@echo "Key baseline metrics:"
+	@grep "unique site patterns" $(CPP_BASELINE) || true
+	@grep "non-root vertices" $(CPP_BASELINE) || true
+	@echo ""
+	@echo "Log-likelihood values:"
+	@grep "log-likelihood" $(CPP_BASELINE) || true
+	@echo ""
+	@echo "✓ Baseline establishment complete!"
+	@echo "  You can now proceed with C conversion."
+
+# Extract baseline metrics to JSON
+.PHONY: baseline-json
+baseline-json: baseline
+	@echo "Extracting baseline metrics to JSON..."
+	@python3 - <<EOF
+import re
+import json
+
+with open('$(CPP_BASELINE)', 'r') as f:
+    content = f.read()
+
+metrics = {}
+
+# Extract patterns
+patterns = re.search(r'unique site patterns.*?(\d+)', content)
+if patterns:
+    metrics['num_patterns'] = int(patterns.group(1))
+
+# Extract vertices
+vertices = re.search(r'non-root vertices.*?(\d+)', content)
+if vertices:
+    metrics['num_vertices'] = int(vertices.group(1))
+
+# Extract log-likelihoods
+ll_pruning = re.search(r'log-likelihood using pruning.*?([-+]?\d*\.\d+|\d+)', content)
+if ll_pruning:
+    metrics['ll_pruning'] = float(ll_pruning.group(1))
+
+ll_opt = re.search(r'log-likelihood using OPTIMIZED propagation.*?([-+]?\d*\.\d+|\d+)', content)
+if ll_opt:
+    metrics['ll_propagation_optimized'] = float(ll_opt.group(1))
+
+ll_mem = re.search(r'log-likelihood using MEMOIZED propagation.*?([-+]?\d*\.\d+|\d+)', content)
+if ll_mem:
+    metrics['ll_propagation_memoized'] = float(ll_mem.group(1))
+
+with open('baseline_metrics.json', 'w') as f:
+    json.dump(metrics, f, indent=2)
+
+print("✓ Baseline metrics saved to: baseline_metrics.json")
+for key, value in metrics.items():
+    print(f"  {key}: {value}")
+EOF
+
+# Run C implementation
+.PHONY: run
+run: $(TARGET)
+	@echo "Running C implementation..."
+	@$(TARGET) -e $(EDGE_LIST) -p $(PATTERNS) -x $(TAXON_ORDER) \
+	           -b $(BASE_COMP) -o $(ROOT_OPT) -c $(ROOT_CHECK)
+
+# Run C implementation and save output
+.PHONY: test
+test: $(TARGET)
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Running C Implementation Test"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@$(TARGET) -e $(EDGE_LIST) -p $(PATTERNS) -x $(TAXON_ORDER) \
+	           -b $(BASE_COMP) -o $(ROOT_OPT) -c $(ROOT_CHECK) > $(C_OUTPUT) 2>&1
+	@echo "✓ Test output saved to: $(C_OUTPUT)"
+	@echo ""
+	@echo "Key metrics from C implementation:"
+	@grep "unique site patterns" $(C_OUTPUT) || true
+	@grep "non-root vertices" $(C_OUTPUT) || true
+	@echo ""
+	@echo "Log-likelihood values:"
+	@grep "log-likelihood" $(C_OUTPUT) || true
+
+# Validate C against C++ baseline (CRITICAL TEST)
+.PHONY: validate
+validate: test
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Validating C vs C++ Implementation"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@if [ ! -f "$(CPP_BASELINE)" ]; then \
+		echo "Baseline not found. Running baseline test first..."; \
+		$(MAKE) baseline; \
+	fi
+	@chmod +x $(VALIDATION_SCRIPT)
+	@./$(VALIDATION_SCRIPT)
+
+# Quick validation (just compare outputs, no detailed report)
+.PHONY: quick-validate
+quick-validate: test
+	@echo "Quick validation of log-likelihoods..."
+	@echo ""
+	@echo "C++ (baseline):"
+	@grep "log-likelihood" $(CPP_BASELINE) | head -3
+	@echo ""
+	@echo "C (current):"
+	@grep "log-likelihood" $(C_OUTPUT) | head -3
+	@echo ""
+	@echo "Run 'make validate' for detailed comparison"
+
+# Memory leak check with valgrind
+.PHONY: valgrind
+valgrind: $(TARGET)
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Memory Leak Detection (valgrind)"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
+	          --verbose --log-file=valgrind_output.txt \
+	          $(TARGET) -e $(EDGE_LIST) -p $(PATTERNS) -x $(TAXON_ORDER) \
+	          -b $(BASE_COMP) -o $(ROOT_OPT) -c $(ROOT_CHECK) > /dev/null 2>&1
+	@echo "✓ Valgrind check complete"
+	@echo ""
+	@echo "Summary:"
+	@grep "definitely lost:" valgrind_output.txt
+	@grep "indirectly lost:" valgrind_output.txt
+	@grep "ERROR SUMMARY:" valgrind_output.txt
+	@echo ""
+	@if grep -q "definitely lost: 0 bytes" valgrind_output.txt && \
+	    grep -q "indirectly lost: 0 bytes" valgrind_output.txt; then \
+		echo "✓ No memory leaks detected!"; \
+	else \
+		echo "⚠ Memory leaks detected. See valgrind_output.txt for details."; \
+		exit 1; \
+	fi
+
+# Full validation suite (all checks)
+.PHONY: check
+check: validate valgrind
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  ✓ FULL VALIDATION COMPLETE"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "All validation checks passed!"
+	@echo "  ✓ Log-likelihoods match C++ baseline"
+	@echo "  ✓ No memory leaks detected"
+	@echo ""
+	@echo "You may proceed to the next stage."
+
+# ============================================================
+# UNIT TESTING TARGETS
+# ============================================================
+
+# Build and run unit tests
+.PHONY: unit-tests
+unit-tests: test_pattern test_vertex test_clique test_utils
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  Running Unit Tests"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Test: Pattern storage"
+	@./$(BINDIR)/test_pattern
+	@echo ""
+	@echo "Test: SEM vertex operations"
+	@./$(BINDIR)/test_vertex
+	@echo ""
+	@echo "Test: Clique operations"
+	@./$(BINDIR)/test_clique
+	@echo ""
+	@echo "Test: Utility functions"
+	@./$(BINDIR)/test_utils
+	@echo ""
+	@echo "✓ All unit tests passed!"
+
+# Individual unit test targets
+test_pattern: $(OBJDIR)/test_pattern.o $(OBJDIR)/embh_pattern.o
+	$(CC) $^ -o $(BINDIR)/$@ $(LDFLAGS)
+
+test_vertex: $(OBJDIR)/test_vertex.o $(OBJDIR)/embh_vertex.o $(OBJDIR)/embh_pattern.o
+	$(CC) $^ -o $(BINDIR)/$@ $(LDFLAGS)
+
+test_clique: $(OBJDIR)/test_clique.o $(OBJDIR)/embh_clique.o $(OBJDIR)/embh_vertex.o $(OBJDIR)/embh_pattern.o
+	$(CC) $^ -o $(BINDIR)/$@ $(LDFLAGS)
+
+test_utils: $(OBJDIR)/test_utils.o $(OBJDIR)/embh_utils.o
+	$(CC) $^ -o $(BINDIR)/$@ $(LDFLAGS)
+
+# ============================================================
+# PERFORMANCE PROFILING
+# ============================================================
+
+# Profile with gprof
+.PHONY: profile
+profile: CFLAGS = -std=c99 -O2 -pg -Wall
+profile: clean $(TARGET)
+	@echo "Running profiled version..."
+	@$(TARGET) -e $(EDGE_LIST) -p $(PATTERNS) -x $(TAXON_ORDER) \
+	           -b $(BASE_COMP) -o $(ROOT_OPT) -c $(ROOT_CHECK) > /dev/null
+	@gprof $(TARGET) gmon.out > profile.txt
+	@echo "✓ Profile saved to: profile.txt"
+	@echo ""
+	@echo "Top 10 time-consuming functions:"
+	@head -30 profile.txt | grep -A 20 "time"
+
+# ============================================================
+# CONTINUOUS INTEGRATION TARGETS
+# ============================================================
+
+# CI target - runs all validation
+.PHONY: ci
+ci: clean baseline all validate valgrind
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  ✓ CONTINUOUS INTEGRATION CHECK PASSED"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================================
+# HELP
+# ============================================================
+
+.PHONY: help
+help:
+	@echo "EMBH C Implementation - Makefile Targets"
+	@echo ""
+	@echo "BUILD TARGETS:"
+	@echo "  all          - Build C implementation (default)"
+	@echo "  debug        - Build with debug symbols (-g3 -O0)"
+	@echo "  clean        - Remove build artifacts"
+	@echo "  distclean    - Remove build artifacts and test outputs"
+	@echo "  rebuild      - Clean and build"
+	@echo ""
+	@echo "TESTING TARGETS:"
+	@echo "  baseline     - Establish C++ baseline (RUN THIS FIRST!)"
+	@echo "  baseline-json- Extract baseline metrics to JSON"
+	@echo "  test         - Run C implementation and save output"
+	@echo "  validate     - ⭐ Compare C vs C++ (CRITICAL TEST)"
+	@echo "  quick-validate- Quick log-likelihood comparison"
+	@echo "  valgrind     - Memory leak detection"
+	@echo "  check        - Full validation (validate + valgrind)"
+	@echo ""
+	@echo "UNIT TESTING:"
+	@echo "  unit-tests   - Run all unit tests"
+	@echo "  test_pattern - Test pattern storage"
+	@echo "  test_vertex  - Test vertex operations"
+	@echo "  test_clique  - Test clique operations"
+	@echo "  test_utils   - Test utility functions"
+	@echo ""
+	@echo "PROFILING:"
+	@echo "  profile      - Profile with gprof"
+	@echo ""
+	@echo "CONTINUOUS INTEGRATION:"
+	@echo "  ci           - Full CI pipeline (baseline + build + validate)"
+	@echo ""
+	@echo "WORKFLOW:"
+	@echo "  1. make baseline     (establish C++ reference)"
+	@echo "  2. make all          (build C implementation)"
+	@echo "  3. make validate     (compare against baseline)"
+	@echo "  4. make valgrind     (check for memory leaks)"
+	@echo "  5. make check        (comprehensive validation)"
+
+# Dependency tracking
+-include $(OBJECTS:.o=.d)
+
+$(OBJDIR)/%.d: %.c
+	@mkdir -p $(OBJDIR)
+	@$(CC) $(CFLAGS) -MM -MT '$(OBJDIR)/$*.o' $< > $@

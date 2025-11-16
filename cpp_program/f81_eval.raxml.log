@@ -7,14 +7,14 @@ Questions/problems/suggestions? Please visit: https://groups.google.com/forum/#!
 
 System: Intel(R) Core(TM) i5-14400, 10 cores, 31 GB RAM (allocated: 8 physical cores)
 
-RAxML-NG was called at 15-Nov-2025 10:38:39 as follows:
+RAxML-NG was called at 16-Nov-2025 13:21:49 as follows:
 
 raxml-ng --evaluate --msa /home/pk/projects/embh/cpp_program/data/CDS_FcC_1000.fas --tree /home/pk/projects/embh/cpp_program/data/RAxML_bipartitions.CDS_FcC_partition --model GTR{1.3409880003/1.3409880003/1.3409880003/1.3409880003/1.3409880003/1.3409880003}+FU{0.2876752105/0.1976084259/0.2594303513/0.2552860122} --prefix /home/pk/projects/embh/cpp_program/f81_eval --threads 1 --opt-model off --opt-branches off --redo
 
 Analysis options:
   run mode: Evaluate tree likelihood
   start tree(s): user
-  random seed: 1763183319
+  random seed: 1763279509
   tip-inner: OFF
   pattern compression: ON
   per-rate scalers: OFF
@@ -72,7 +72,7 @@ Optimized model saved to: /home/pk/projects/embh/cpp_program/f81_eval.raxml.best
 
 Execution log saved to: /home/pk/projects/embh/cpp_program/f81_eval.raxml.log
 
-Analysis started: 15-Nov-2025 10:38:39 / finished: 15-Nov-2025 10:38:39
+Analysis started: 16-Nov-2025 13:21:49 / finished: 16-Nov-2025 13:21:49
 
-Elapsed time: 0.029 seconds
+Elapsed time: 0.035 seconds
 

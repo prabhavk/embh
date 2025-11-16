@@ -1339,8 +1339,8 @@ public:
 	void ReadPatternsFromFile(string pattern_file_name, string taxon_order_file_name);
     void ComputeLogLikelihoodUsingPatterns();
     void ComputeLogLikelihoodUsingPatternsWithPropagation();
-    void ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
-    void ComparePruningAndPropagationOnPatterns(bool verbose = false);
+    void ComputeLogLikelihoodUsingPatternsWithPropagationAtClique(clique* target_clique);
+    void VerifyLogLikelihoodAtAllCliques();    
 	void AddArc(SEM_vertex * from, SEM_vertex * to);
 	void RemoveArc(SEM_vertex * from, SEM_vertex * to);
 	void ClearDirectedEdges();
@@ -1437,7 +1437,8 @@ public:
 	void ComputeInitialEstimateOfModelParametersForTrifle(int layer);
 	void BumpZeroEntriesOfModelParameters();
 	void SetInitialEstimateOfModelParametersUsingDirichlet();
-	void SetInitialEstimateOfModelParametersUsingHSS();	
+	void SetModelParametersUsingHSS();	
+	void EvaluateBHModelWithRootAtCheck(string root_check_name);
 	void SwapRoot();
 	void SuppressRoot();	
 	bool root_search;
@@ -1489,7 +1490,7 @@ public:
 	void EM_DNA_rooted_at_each_internal_vertex_started_with_parsimony_store_results(int num_repetitions);
 	void EM_DNA_rooted_at_each_internal_vertex_started_with_HSS_store_results(int num_repetitions);
 	void EMTrifle_DNA_for_replicate(int replicate);
-	void embh_aitken();
+	void embh_aitken(int max_iterations);
 	void EMTrifle_DNA_rooted_at_each_internal_vertex_started_with_parsimony_store_results();
 	void EMtrifle_DNA_rooted_at_each_internal_vertex_started_with_dirichlet_store_results();
 	void EMtrifle_DNA_rooted_at_each_internal_vertex_started_with_HSS_store_results();	
@@ -2958,6 +2959,9 @@ void SEM::ComputeMarginalProbabilitiesUsingExpectedCounts() {
 }
 
 void SEM::ConstructCliqueTree() {
+	if (this->cliqueT == nullptr) {
+		this->cliqueT = new cliqueTree;
+	}
 	this->cliqueT->rootSet = 0;
 	SEM_vertex * root;
 	for (clique * C : this->cliqueT->cliques) {
@@ -3734,50 +3738,6 @@ void SEM::ComputeLogLikelihoodUsingPatterns() {
 }
 
 void SEM::ComputeLogLikelihoodUsingPatternsWithPropagation() {
-    if (this->cliqueT == nullptr) {
-        cerr << "Error: Clique tree not constructed. Call ConstructCliqueTree() first." << endl;
-        return;
-    }
-
-    // Use the already-compressed sequences (from CompressDNASequences)
-    // This matches exactly what the pruning algorithm uses
-    this->logLikelihood = 0;
-    clique* rootClique = this->cliqueT->root;
-
-    if (rootClique == nullptr) {
-        cerr << "Error: Root clique is null" << endl;
-        return;
-    }
-
-    // Iterate over compressed patterns (same as pruning algorithm)
-    for (int site = 0; site < this->num_dna_patterns; site++) {
-        // Set current site index
-        this->cliqueT->SetSite(site);
-
-        // Initialize potentials from DNAcompressed
-        this->cliqueT->InitializePotentialAndBeliefs();
-
-        // Run belief propagation (message passing)
-        this->cliqueT->CalibrateTree();
-
-        // Marginalize at root to get P(root_state | data)
-        array<double, 4> marginalAtRoot = rootClique->MarginalizeOverVariable(rootClique->x);
-
-        // Compute site likelihood: sum over root states weighted by root probabilities
-        double siteLikelihood = 0.0;
-        for (int dna = 0; dna < 4; dna++) {
-            siteLikelihood += this->rootProbability[dna] * marginalAtRoot[dna];
-        }
-
-        // Compute log-likelihood with scaling factor
-        double siteLogLikelihood = rootClique->logScalingFactorForClique + log(siteLikelihood);
-
-        // Add weighted contribution
-        this->logLikelihood += siteLogLikelihood * this->DNAPatternWeights[site];
-    }
-}
-
-void SEM::ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm() {
     if (packed_patterns == nullptr) {
         cerr << "Error: No patterns loaded. Call ReadPatternsFromFile() first." << endl;
         return;
@@ -3854,54 +3814,192 @@ void SEM::ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm() {
     }
 }
 
-void SEM::ComparePruningAndPropagationOnPatterns(bool verbose) {
-    cout << "\n" << string(70, '=') << endl;
-    cout << "COMPARING PRUNING AND PROPAGATION ALGORITHMS" << endl;
-    cout << string(70, '=') << endl;
+void SEM::ComputeLogLikelihoodUsingPatternsWithPropagationAtClique(clique* target_clique) {
+    if (packed_patterns == nullptr) {
+        cerr << "Error: No patterns loaded. Call ReadPatternsFromFile() first." << endl;
+        return;
+    }
 
-    // Pruning algorithm (uses DNAcompressed)
-    auto start_pruning = chrono::high_resolution_clock::now();
-    this->ComputeLogLikelihood();
-    double ll_pruning = this->logLikelihood;
-    auto end_pruning = chrono::high_resolution_clock::now();
-    chrono::duration<double> time_pruning = end_pruning - start_pruning;
-
-    cout << "\nPRUNING ALGORITHM:" << endl;
-    cout << "  Log-likelihood: " << fixed << setprecision(10) << ll_pruning << endl;
-    cout << "  Time:           " << setprecision(4) << time_pruning.count() << " s" << endl;
-
-    // Build clique tree if needed
     if (this->cliqueT == nullptr || this->cliqueT->root == nullptr) {
         this->ConstructCliqueTree();
     }
 
-    // Propagation algorithm
-    auto start_propagation = chrono::high_resolution_clock::now();
-    this->ComputeLogLikelihoodUsingPatternsWithPropagation();
-    double ll_propagation = this->logLikelihood;
-    auto end_propagation = chrono::high_resolution_clock::now();
-    chrono::duration<double> time_propagation = end_propagation - start_propagation;
+    this->logLikelihood = 0;
 
-    cout << "\nPROPAGATION ALGORITHM:" << endl;
-    cout << "  Log-likelihood: " << fixed << setprecision(10) << ll_propagation << endl;
-    cout << "  Time:           " << setprecision(4) << time_propagation.count() << " s" << endl;
-
-    // Comparison
-    double difference = abs(ll_pruning - ll_propagation);
-    double tolerance = 1e-6;
-
-    cout << "\nCOMPARISON:" << endl;
-    cout << "  Difference: " << scientific << setprecision(6) << difference << endl;
-    cout << "  Speedup:    " << fixed << setprecision(2)
-         << (time_pruning.count() / time_propagation.count()) << "x" << endl;
-
-    if (difference < tolerance) {
-        cout << "  Status: PASSED (within tolerance " << scientific << tolerance << ")" << endl;
-    } else {
-        cout << "  Status: FAILED (exceeds tolerance)" << endl;
+    // Get pattern-to-taxon mapping
+    map<int, int> pattern_index_to_vertex_index;
+    for (auto& pair : *this->vertexMap) {
+        SEM_vertex* v = pair.second;
+        if (v->observed && v->pattern_index >= 0) {
+            pattern_index_to_vertex_index[v->pattern_index] = v->id;
+        }
     }
 
-    cout << string(70, '=') << endl;
+    int num_taxa = packed_patterns->get_num_taxa();
+
+    // Save original DNAcompressed data for observed vertices
+    map<SEM_vertex*, vector<int>> saved_DNAcompressed;
+    for (auto& pair : *this->vertexMap) {
+        SEM_vertex* v = pair.second;
+        if (v->observed) {
+            saved_DNAcompressed[v] = v->DNAcompressed;
+            v->DNAcompressed.resize(num_patterns_from_file, 4);
+        }
+    }
+
+    // Pre-populate all patterns into DNAcompressed
+    for (int pattern_idx = 0; pattern_idx < num_patterns_from_file; pattern_idx++) {
+        vector<uint8_t> pattern = packed_patterns->get_pattern(pattern_idx);
+
+        for (int taxon_idx = 0; taxon_idx < num_taxa; taxon_idx++) {
+            auto it = pattern_index_to_vertex_index.find(taxon_idx);
+            if (it != pattern_index_to_vertex_index.end()) {
+                SEM_vertex* v = (*this->vertexMap)[it->second];
+                v->DNAcompressed[pattern_idx] = pattern[taxon_idx];
+            }
+        }
+    }
+
+    // Now iterate over each pattern
+    for (int pattern_idx = 0; pattern_idx < num_patterns_from_file; pattern_idx++) {
+        this->cliqueT->SetSite(pattern_idx);
+        this->cliqueT->InitializePotentialAndBeliefs();
+        this->cliqueT->CalibrateTree();
+
+        // Compute likelihood at the target clique
+        // After calibration, the belief in each clique represents P(X,Y | all data)
+        // The likelihood P(data) = sum_{x,y} belief[x][y] * (correction factors)
+
+        // For any clique after calibration:
+        // belief[x][y] is proportional to P(X=x, Y=y | data)
+        // Sum over belief gives 1 (normalized), so we need to use the log scaling factors
+
+        double siteLikelihood = 0.0;
+
+        // Check if target clique contains the root variable
+        if (target_clique->x == this->root || target_clique->y == this->root) {
+            // This clique contains the root, similar to root clique computation
+            if (target_clique->x == this->root) {
+                // X is root, marginalize over Y
+                std::array<double, 4> marginalX = target_clique->MarginalizeOverVariable(target_clique->y);
+                for (int dna = 0; dna < 4; dna++) {
+                    siteLikelihood += this->rootProbability[dna] * marginalX[dna];
+                }
+            } else {
+                // Y is root, marginalize over X
+                std::array<double, 4> marginalY = target_clique->MarginalizeOverVariable(target_clique->x);
+                for (int dna = 0; dna < 4; dna++) {
+                    siteLikelihood += this->rootProbability[dna] * marginalY[dna];
+                }
+            }
+        } else {
+            // For non-root cliques, we need to properly incorporate the root prior
+            // The key insight: we need to find a clique that contains the root variable
+            // and use the marginal P(root | data) from that clique, weighted by P(root)
+
+            // Find the root clique (clique containing the root variable)
+            clique* root_clique = this->cliqueT->root;
+
+            // Get marginal probability of root variable from the root clique
+            std::array<double, 4> marginalRoot;
+            if (root_clique->x == this->root) {
+                marginalRoot = root_clique->MarginalizeOverVariable(root_clique->y);
+            } else {
+                marginalRoot = root_clique->MarginalizeOverVariable(root_clique->x);
+            }
+
+            // The likelihood is P(data) = sum_r P(r) * P(data | r)
+            // But from the target clique, we have P(X, Y | data) which sums to 1
+            // The scaling factor from target clique represents the unnormalized likelihood
+            // We need to weight by the root prior
+
+            // Since beliefs are normalized, sum to 1
+            // But we still need the root prior factor
+            // The difference between root_clique and target_clique computations is:
+            // - root_clique: weights by P(root) explicitly
+            // - target_clique: doesn't include P(root)
+
+            // Use the fact that after calibration, all cliques see the same evidence
+            // The scaling factors encode this evidence
+            // We need to add the contribution from P(root)
+
+            double rootPriorContribution = 0.0;
+            for (int dna = 0; dna < 4; dna++) {
+                rootPriorContribution += this->rootProbability[dna] * marginalRoot[dna];
+            }
+
+            siteLikelihood = rootPriorContribution;
+        }
+
+        // Combine with accumulated log scaling factors
+        double siteLogLikelihood = target_clique->logScalingFactorForClique + log(siteLikelihood);
+
+        // Use pattern weight
+        int weight = pattern_weights[pattern_idx];
+        this->logLikelihood += siteLogLikelihood * weight;
+    }
+
+    // Restore original DNAcompressed data
+    for (auto& pair : saved_DNAcompressed) {
+        pair.first->DNAcompressed = pair.second;
+    }
+}
+
+void SEM::VerifyLogLikelihoodAtAllCliques() {
+    if (packed_patterns == nullptr) {
+        cerr << "Error: No patterns loaded. Call ReadPatternsFromFile() first." << endl;
+        return;
+    }
+
+    if (this->cliqueT == nullptr || this->cliqueT->root == nullptr) {
+        this->ConstructCliqueTree();
+    }
+
+    // First compute reference log-likelihood at root clique
+    this->ComputeLogLikelihoodUsingPatternsWithPropagation();
+    double reference_ll = this->logLikelihood;
+    cout << "Reference log-likelihood (at root clique): " << setprecision(11) << reference_ll << endl;
+
+    // Now verify at each clique in the tree
+    cout << "\nVerifying log-likelihood computation at all " << this->cliqueT->cliques.size() << " cliques:" << endl;
+
+    int num_passed = 0;
+    int num_failed = 0;
+    double tolerance = 1e-6;
+
+    for (clique* C : this->cliqueT->cliques) {
+        this->ComputeLogLikelihoodUsingPatternsWithPropagationAtClique(C);
+        double clique_ll = this->logLikelihood;
+
+        double abs_diff = fabs(clique_ll - reference_ll);
+        double rel_diff = abs_diff / fabs(reference_ll);
+
+        bool passed = (abs_diff < tolerance) || (rel_diff < tolerance);
+
+        if (passed) {
+            num_passed++;
+            cout << "  PASSED: Clique " << C->name
+                 << " (X=" << C->x->name << ", Y=" << C->y->name << ")"
+                 << " LL=" << setprecision(11) << clique_ll << endl;
+        } else {
+            num_failed++;
+            cout << "  FAILED: Clique " << C->name
+                 << " (X=" << C->x->name << ", Y=" << C->y->name << ")"
+                 << " LL=" << setprecision(11) << clique_ll
+                 << " diff=" << abs_diff << endl;
+        }
+    }
+
+    cout << "\nVerification summary:" << endl;
+    cout << "  Passed: " << num_passed << "/" << this->cliqueT->cliques.size() << endl;
+    if (num_failed > 0) {
+        cout << "  FAILED: " << num_failed << "/" << this->cliqueT->cliques.size() << endl;
+    } else {
+        cout << "  All cliques compute the same log-likelihood!" << endl;
+    }
+
+    // Restore reference log-likelihood
+    this->logLikelihood = reference_ll;
 }
 
 string SEM::EncodeAsDNA(vector<int> sequence){
@@ -4190,7 +4288,7 @@ void SEM::EMTrifle_DNA_for_replicate(int rep) {
 }
 
 
-void SEM::embh_aitken() {
+void SEM::embh_aitken(int max_iterations) {
     // ============================================================================
     // IMPROVED AITKEN ACCELERATION FOR EM CONVERGENCE
     // Uses F81 model as initial parameters
@@ -4211,10 +4309,10 @@ void SEM::embh_aitken() {
     const double PER_SITE_TOLERANCE = 1e-5;
     const double TOLERANCE = PER_SITE_TOLERANCE * num_sites;
 
-    this->maxIter = MAX_ITERATIONS;
+    this->maxIter = max_iterations;
 
     // Compute initial TRUE log-likelihood using propagation algorithm
-    this->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+    this->ComputeLogLikelihoodUsingPatternsWithPropagation();
     double ll_0 = this->logLikelihood;
 
     cout << "\n====================================================" << endl;
@@ -4248,7 +4346,7 @@ void SEM::embh_aitken() {
         this->ComputeMLEstimateOfBHGivenExpectedDataCompletion();
 
         // Compute new log-likelihood
-        this->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+        this->ComputeLogLikelihoodUsingPatternsWithPropagation();
         ll_curr = this->logLikelihood;
 
         double improvement = ll_curr - ll_prev;
@@ -4772,7 +4870,7 @@ void SEM::EMTrifle_started_with_HSS_rooted_at(SEM_vertex *v, int layer) {
 	// iterate over each internal node	
 	this->RootTreeAtVertex(v);
 	if (layer == 0) {
-		this->SetInitialEstimateOfModelParametersUsingHSS();		
+		this->SetModelParametersUsingHSS();		
 	}
 	this->BumpZeroEntriesOfModelParameters();
 	this->StoreInitialParamsInEMTrifleCurrent(layer);
@@ -4980,7 +5078,7 @@ tuple <int,double,double,double,double> SEM::EM_started_with_HSS_parameters_root
 	// iterate over each internal node	
 	this->RootTreeAtVertex(v);
 	// cout << "10b" << endl;	
-	this->SetInitialEstimateOfModelParametersUsingHSS();
+	this->SetModelParametersUsingHSS();
 	this->StoreParamsInEMCurrent("init");
 	this->ComputeLogLikelihood();	
 	// cout << "10d" << endl;
@@ -5580,7 +5678,17 @@ void SEM::StoreParamsInEMCurrent(string init_or_final) {
 	}
 }
 
-void SEM::SetInitialEstimateOfModelParametersUsingHSS() {
+void SEM::EvaluateBHModelWithRootAtCheck(string root_check_name) {
+	this->cliqueT = nullptr;
+	SEM_vertex * r = this->GetVertex(root_check_name);
+	this->ReparameterizeBH();
+	this->RootTreeAtVertex(r);
+	this->SetModelParametersUsingHSS();
+	this->ComputeLogLikelihoodUsingPatternsWithPropagation();
+	cout << "Log-likelihood with root at " << root_check_name << " is " << setprecision(ll_precision) << this->logLikelihood << endl;
+}
+
+void SEM::SetModelParametersUsingHSS() {
 	
 	// cout << "root is set at " << this->root->name << endl;
 	// set root probability 
@@ -6373,6 +6481,7 @@ void SEM::SetF81Matrix(SEM_vertex* v) {
 }
 
 void SEM::SetF81Model(string baseCompositionFileName) {
+	this->SetRootProbabilityAsSampleBaseComposition(baseCompositionFileName);
 	this->SetF81_mu();
 	cout << "number of non-root vertices is " << this->non_root_vertices.size() << endl;
 	for (SEM_vertex * v: this->non_root_vertices) SetF81Matrix(v);
@@ -6629,15 +6738,7 @@ manager::manager(const string edge_list_file_name,
 		this->P->RootTreeAtVertex(root_optim);
 		this->P->SetVertexVectorExceptRoot();
 		cout << "Number of non-root vertices is " << this->P->non_root_vertices.size() << endl;		
-		cout << "Number of unique site patterns is " << this->P->num_dna_patterns << endl;
-
-		
-		// set root probability as sample base composition
-		this->P->SetRootProbabilityAsSampleBaseComposition(base_composition_file_name);
-		// define F81 model using base composition file
-		
-		
-		// [] set F81 model
+		cout << "Number of unique site patterns is " << this->P->num_dna_patterns << endl;		
 		this->P->SetF81Model(base_composition_file_name); // assign transition probabilities
 		// [] compute log-likelihood score using pruning algorithm with fasta input
 		cout << "\n=== Computing log-likelihood using compressed sequences ===" << endl;
@@ -6653,16 +6754,22 @@ manager::manager(const string edge_list_file_name,
 
 			// Compute using propagation algorithm with patterns
 			cout << "\n=== Computing log-likelihood using propagation algorithm with patterns ===" << endl;
-			this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+			this->P->ComputeLogLikelihoodUsingPatternsWithPropagation();
 			cout << "log-likelihood using propagation algorithm and packed patterns is "
-			     << setprecision(11) << this->P->logLikelihood << endl;			
+			     << setprecision(11) << this->P->logLikelihood << endl;
+
+			// Verify log-likelihood computation at all cliques
+			cout << "\n=== Verifying log-likelihood computation at all cliques ===" << endl;
+			this->P->VerifyLogLikelihoodAtAllCliques();
 		}
+		this->P->embh_aitken(100);		
 		// [] compute log-likelihood score using pruning algorithm with pattern input
 		// [] compute log-likelihood score using propagation algorithm with pattern input
 		/* [] reuse messages for branch patterns and compute log-likelihood
 		 using propagation algorithm with */
-		// the following is for BH modelgre
-		SEM_vertex * root_check = this->P->GetVertex(root_check_name);
+		// the following is for BH modelgre		
+		// this->RunEMWithAitken();		
+		this->P->EvaluateBHModelWithRootAtCheck(root_check_name);
 		// set root estimate and root test
 		}
 
@@ -6723,15 +6830,6 @@ void manager::SetDNAMap() {
 	this->mapDNAtoInteger["T"] = 3;
 }
 
-void manager::CompareAlgorithms(bool verbose) {
-    if (this->P == nullptr) {
-        cerr << "Error: SEM object not initialized" << endl;
-        return;
-    }
-
-    this->P->ComparePruningAndPropagationOnPatterns(verbose);
-}
-
 void manager::EvaluateLogLikelihoodWithPropagation() {
     if (this->P == nullptr) {
         cerr << "Error: SEM object not initialized" << endl;
@@ -6747,12 +6845,12 @@ void manager::RunEMWithAitken() {
     }
 
     cout << "\n=== Running EM with Aitken Acceleration ===" << endl;
-    this->P->embh_aitken();
+    this->P->embh_aitken(100);
     this->max_log_lik = this->P->logLikelihood;
     cout << "\nFinal maximum log-likelihood: " << setprecision(14) << this->max_log_lik << endl;
 
-    cout << "Evaluating log-likelihood using propagation algorithm with patterns..." << endl;
-    this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
-    cout << "Log-likelihood: " << setprecision(11) << this->P->logLikelihood << endl;
+    // cout << "Evaluating log-likelihood using propagation algorithm with patterns..." << endl;
+    // this->P->ComputeLogLikelihoodUsingPatternsWithPropagationAlgorithm();
+    // cout << "Log-likelihood: " << setprecision(11) << this->P->logLikelihood << endl;
 }
 

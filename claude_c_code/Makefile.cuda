@@ -1,0 +1,73 @@
+# Makefile for EMBH C Implementation with CUDA support
+# Build with: make -f Makefile.cuda
+
+CC = gcc
+NVCC = nvcc
+CFLAGS = -std=c99 -O2 -Wall -Wextra -pedantic -I./include -DUSE_CUDA
+NVCCFLAGS = -O2 -I./include -DUSE_CUDA --compiler-options -Wall
+LDFLAGS = -lm -lcudart -L/usr/lib/x86_64-linux-gnu
+
+SRCDIR = src
+TESTDIR = test
+OBJDIR = obj
+BINDIR = bin
+
+# C source files
+C_SOURCES = $(SRCDIR)/embh_pattern.c \
+            $(SRCDIR)/embh_vertex.c \
+            $(SRCDIR)/embh_clique.c \
+            $(SRCDIR)/embh_sem.c \
+            $(SRCDIR)/embh_utils.c \
+            $(SRCDIR)/embh_io.c \
+            $(SRCDIR)/embh_pruning.c \
+            $(SRCDIR)/embh_propagation.c \
+            $(SRCDIR)/embh_em.c \
+            $(SRCDIR)/embh_manager.c
+
+# CUDA source files
+CUDA_SOURCES = $(SRCDIR)/embh_cuda.cu
+
+C_OBJECTS = $(C_SOURCES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+CUDA_OBJECTS = $(CUDA_SOURCES:$(SRCDIR)/%.cu=$(OBJDIR)/%.o)
+
+.PHONY: all clean directories embh_cuda run_cuda
+
+all: directories embh_cuda
+
+# Main EMBH executable with CUDA
+embh_cuda: directories $(C_OBJECTS) $(CUDA_OBJECTS) $(SRCDIR)/embh_main.c
+	$(NVCC) $(NVCCFLAGS) $(SRCDIR)/embh_main.c $(C_OBJECTS) $(CUDA_OBJECTS) -o $(BINDIR)/embh_cuda $(LDFLAGS)
+	@echo "Built CUDA-enabled EMBH executable: $(BINDIR)/embh_cuda"
+
+directories:
+	@mkdir -p $(OBJDIR) $(BINDIR)
+
+# Compile C source files
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile CUDA source files
+$(OBJDIR)/%.o: $(SRCDIR)/%.cu
+	@mkdir -p $(OBJDIR)
+	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+
+# Run CUDA-enabled pipeline
+run_cuda: embh_cuda
+	./$(BINDIR)/embh_cuda \
+		-e data/RAxML_bipartitions.CDS_FcC_partition.edgelist \
+		-p data/patterns_1000.pat \
+		-x data/patterns_1000.taxon_order \
+		-b data/patterns_1000.basecomp \
+		-o h_0 -c h_5
+
+# Clean
+clean:
+	rm -rf $(OBJDIR) $(BINDIR)
+
+# Check CUDA installation
+check_cuda:
+	@echo "Checking CUDA installation..."
+	@which nvcc || echo "nvcc not found in PATH"
+	@nvcc --version || echo "Cannot get nvcc version"
+	@nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv,noheader || echo "nvidia-smi failed"

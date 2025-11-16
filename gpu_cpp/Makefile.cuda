@@ -1,0 +1,48 @@
+# Makefile for CUDA GPU acceleration of EMBH log-likelihood computation
+
+NVCC = nvcc
+NVCC_FLAGS = -O3 -std=c++11 -arch=sm_60 -Xcompiler -Wall
+
+# CPU-only programs
+CXX = g++
+CXXFLAGS = -O3 -std=c++11 -Wall
+
+# Targets
+all: naive_gpu_ll grouped_ll_cpu test_gpu_loader test_leaf_only libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu
+
+# Naive GPU implementation (pattern parallelization)
+naive_gpu_ll: naive_gpu_ll.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# GPU Likelihood Library
+gpu_likelihood.o: gpu_likelihood.cu gpu_likelihood.cuh
+	$(NVCC) $(NVCC_FLAGS) -c -o $@ gpu_likelihood.cu
+
+libgpu_likelihood.a: gpu_likelihood.o
+	ar rcs $@ $<
+
+# GPU Likelihood Library Test
+test_gpu_likelihood: test_gpu_likelihood.cu gpu_likelihood.o
+	$(NVCC) $(NVCC_FLAGS) -o $@ test_gpu_likelihood.cu gpu_likelihood.o -lcudart
+
+# GPU-Accelerated EMBH with Aitken Acceleration (standalone with full E-step/M-step)
+embh_aitken_gpu: embh_aitken_gpu.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# CPU reference for grouped approach
+grouped_ll_cpu: grouped_ll_cpu.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+# GPU data loader test (CPU only)
+test_gpu_loader: test_gpu_loader.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+# Leaf-only test
+test_leaf_only: test_leaf_only.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+clean:
+	rm -f naive_gpu_ll grouped_ll_cpu test_gpu_loader test_leaf_only
+	rm -f gpu_likelihood.o libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu
+
+.PHONY: all clean

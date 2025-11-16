@@ -1,0 +1,355 @@
+==215384== Memcheck, a memory error detector
+==215384== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==215384== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==215384== Command: ./bin/test_suite
+==215384== 
+============================================
+EMBH C Implementation - Comprehensive Tests
+============================================
+
+========== Stage 1.1: PackedPatternStorage ==========
+  PASS: Create packed storage
+  PASS: Get base A
+  PASS: Get base C
+  PASS: Get base G
+  PASS: Get base T
+  PASS: Get base GAP
+  PASS: Store and retrieve 1000 base values
+  PASS: Memory efficient storage
+    Memory: 375 bytes (37.5% of naive)
+
+========== Stage 1.2: SEM_vertex ==========
+  PASS: Create vertex 1
+  PASS: Create vertex 2
+  PASS: Create vertex 3
+  PASS: Add 2 neighbors
+  PASS: Remove 1 neighbor
+  PASS: Set parent correctly
+  PASS: Add child
+  PASS: Set vertex name
+
+========== Stage 1.4: Main SEM Structure ==========
+  PASS: Create SEM
+  PASS: Add observed vertex
+  PASS: Add hidden vertex
+  PASS: Get vertex by name
+  PASS: Get vertex by id
+  PASS: Vertex observed flag
+  PASS: Hidden vertex flag
+  PASS: Contains existing vertex
+  PASS: Does not contain missing vertex
+
+========== Stage 2: Utility Functions ==========
+  PASS: Identity matrix [0,0]
+  PASS: Identity matrix [1,1]
+  PASS: Identity matrix [0,1]
+  PASS: Matrix copy
+  PASS: DNA A to index
+  PASS: DNA C to index
+  PASS: DNA G to index
+  PASS: DNA T to index
+  PASS: DNA gap to index
+  PASS: Index 0 to DNA
+  PASS: Index 1 to DNA
+  PASS: Index 2 to DNA
+  PASS: Index 3 to DNA
+  PASS: Index 4 to DNA
+  PASS: String starts with prefix
+  PASS: String does not start with suffix
+
+========== Stage 3: File I/O ==========
+  PASS: Create SEM for I/O
+Number of edges in topology file is 73
+  PASS: Load correct number of vertices
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+  PASS: Load correct number of patterns
+  PASS: Packed patterns allocated
+  PASS: Find root vertex
+  PASS: Tree rooted correctly
+  PASS: Correct number of leaves
+Number of non-root vertices is 73
+  PASS: Correct number of non-root vertices
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+  PASS: Root probability[0] matches baseline
+  PASS: Root probability[1] matches baseline
+  PASS: Root probability[2] matches baseline
+  PASS: Root probability[3] matches baseline
+
+========== Stage 4: Pruning Algorithm ==========
+Number of edges in topology file is 73
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+Number of non-root vertices is 73
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+  PASS: Log-likelihood is negative
+  PASS: Log-likelihood is not NaN
+  PASS: Log-likelihood is not infinite
+  PASS: Log-likelihood matches C++ baseline (1e-3 tolerance)
+    Computed LL: -19310.06331508588 in 69.26 ms
+
+========== Stage 5: Belief Propagation ==========
+Number of edges in topology file is 73
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+Number of non-root vertices is 73
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+Constructed clique tree with 73 cliques, 37 leaves
+  PASS: Clique tree constructed
+  PASS: Correct number of cliques
+  PASS: Propagation matches pruning (1e-10)
+    Pruning LL: -19310.06331508588
+    Propagation LL: -19310.06331508588
+    Difference: 0.00e+00 (computed in 698.76 ms)
+
+========== Stage 6: EM Algorithm ==========
+Number of edges in topology file is 73
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+Number of non-root vertices is 73
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+Constructed clique tree with 73 cliques, 37 leaves
+
+====================================================
+EM with Aitken Acceleration
+====================================================
+Initial LL: -19310.06
+Number of sites: 1000
+Convergence tolerance: 1.00e-02 (1.00e-05 per site)
+----------------------------------------------------------------------
+Iter   1: LL = -18197.29 (+1.11e+03)
+Iter   2: LL = -18121.63 (+7.57e+01)
+Iter   3: LL = -18096.90 (+2.47e+01) | Rate: 0.327 | Aitken LL: -18084.88 | Dist: 1.20e+01
+Iter   4: LL = -18084.83 (+1.21e+01) | Rate: 0.488 | Aitken LL: -18073.35 | Dist: 1.15e+01
+Iter   5: LL = -18078.01 (+6.83e+00) | Rate: 0.566 | Aitken LL: -18069.11 | Dist: 8.90e+00
+Iter   6: LL = -18073.89 (+4.11e+00) | Rate: 0.602 | Aitken LL: -18067.66 | Dist: 6.23e+00
+Iter   7: LL = -18071.28 (+2.61e+00) | Rate: 0.635 | Aitken LL: -18066.75 | Dist: 4.53e+00
+Iter   8: LL = -18069.54 (+1.74e+00) | Rate: 0.667 | Aitken LL: -18066.05 | Dist: 3.49e+00
+Iter   9: LL = -18068.33 (+1.21e+00) | Rate: 0.695 | Aitken LL: -18065.57 | Dist: 2.76e+00
+Iter  10: LL = -18067.47 (+8.65e-01) | Rate: 0.715 | Aitken LL: -18065.30 | Dist: 2.17e+00
+Iter  11: LL = -18066.84 (+6.26e-01) | Rate: 0.724 | Aitken LL: -18065.20 | Dist: 1.64e+00
+Iter  12: LL = -18066.38 (+4.57e-01) | Rate: 0.729 | Aitken LL: -18065.16 | Dist: 1.23e+00
+Iter  13: LL = -18066.04 (+3.39e-01) | Rate: 0.743 | Aitken LL: -18065.06 | Dist: 9.80e-01
+Iter  14: LL = -18065.78 (+2.61e-01) | Rate: 0.769 | Aitken LL: -18064.91 | Dist: 8.68e-01
+Iter  15: LL = -18065.57 (+2.09e-01) | Rate: 0.802 | Aitken LL: -18064.73 | Dist: 8.47e-01
+Iter  16: LL = -18065.40 (+1.75e-01) | Rate: 0.836 | Aitken LL: -18064.51 | Dist: 8.91e-01
+Iter  17: LL = -18065.25 (+1.52e-01) | Rate: 0.868 | Aitken LL: -18064.25 | Dist: 1.00e+00
+Iter  18: LL = -18065.11 (+1.36e-01) | Rate: 0.898 | Aitken LL: -18063.92 | Dist: 1.19e+00
+Iter  19: LL = -18064.99 (+1.26e-01) | Rate: 0.924 | Aitken LL: -18063.46 | Dist: 1.52e+00
+Iter  20: LL = -18064.87 (+1.19e-01) | Rate: 0.946 | Aitken LL: -18062.77 | Dist: 2.10e+00
+Iter  21: LL = -18064.75 (+1.15e-01) | Rate: 0.965 | Aitken: disabled
+Iter  22: LL = -18064.64 (+1.13e-01) | Rate: 0.979 | Aitken: disabled
+Iter  23: LL = -18064.53 (+1.11e-01) | Rate: 0.988 | Aitken: disabled
+Iter  24: LL = -18064.42 (+1.10e-01) | Rate: 0.991 | Aitken: disabled
+Iter  25: LL = -18064.31 (+1.09e-01) | Rate: 0.987 | Aitken: disabled
+Iter  26: LL = -18064.20 (+1.06e-01) | Rate: 0.976 | Aitken: disabled
+Iter  27: LL = -18064.10 (+1.02e-01) | Rate: 0.959 | Aitken: disabled
+Iter  28: LL = -18064.00 (+9.58e-02) | Rate: 0.940 | Aitken LL: -18062.50 | Dist: 1.51e+00
+Iter  29: LL = -18063.92 (+8.82e-02) | Rate: 0.921 | Aitken LL: -18062.89 | Dist: 1.03e+00
+Iter  30: LL = -18063.84 (+7.98e-02) | Rate: 0.904 | Aitken LL: -18063.08 | Dist: 7.52e-01
+Iter  31: LL = -18063.77 (+7.10e-02) | Rate: 0.891 | Aitken LL: -18063.19 | Dist: 5.80e-01
+Iter  32: LL = -18063.70 (+6.26e-02) | Rate: 0.881 | Aitken LL: -18063.24 | Dist: 4.65e-01
+Iter  33: LL = -18063.65 (+5.48e-02) | Rate: 0.875 | Aitken LL: -18063.26 | Dist: 3.83e-01
+Iter  34: LL = -18063.60 (+4.77e-02) | Rate: 0.870 | Aitken LL: -18063.28 | Dist: 3.20e-01
+Iter  35: LL = -18063.56 (+4.13e-02) | Rate: 0.867 | Aitken LL: -18063.29 | Dist: 2.70e-01
+Iter  36: LL = -18063.52 (+3.57e-02) | Rate: 0.865 | Aitken LL: -18063.29 | Dist: 2.29e-01
+Iter  37: LL = -18063.49 (+3.09e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.95e-01
+Iter  38: LL = -18063.47 (+2.67e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.70e-01
+Iter  39: LL = -18063.44 (+2.31e-02) | Rate: 0.866 | Aitken LL: -18063.29 | Dist: 1.50e-01
+Iter  40: LL = -18063.42 (+2.01e-02) | Rate: 0.870 | Aitken LL: -18063.29 | Dist: 1.35e-01
+Iter  41: LL = -18063.40 (+1.76e-02) | Rate: 0.875 | Aitken LL: -18063.28 | Dist: 1.23e-01
+Iter  42: LL = -18063.39 (+1.55e-02) | Rate: 0.881 | Aitken LL: -18063.28 | Dist: 1.14e-01
+Iter  43: LL = -18063.38 (+1.37e-02) | Rate: 0.887 | Aitken LL: -18063.27 | Dist: 1.08e-01
+Iter  44: LL = -18063.36 (+1.23e-02) | Rate: 0.893 | Aitken LL: -18063.26 | Dist: 1.02e-01
+Iter  45: LL = -18063.35 (+1.10e-02) | Rate: 0.899 | Aitken LL: -18063.25 | Dist: 9.83e-02
+Iter  46: LL = -18063.34 (+9.98e-03) | Rate: 0.905 | Aitken LL: -18063.25 | Dist: 9.51e-02
+Converged (standard criterion)
+----------------------------------------------------------------------
+Converged after 46 iterations
+
+====================================================
+Final Results:
+  Initial LL:  -19310.06
+  Final LL:    -18063.34
+  Improvement: 1246.72
+  Iterations:  46
+  LL/site:     -18.063342
+====================================================
+  PASS: EM improves log-likelihood
+  PASS: EM improvement > 1000
+  PASS: Final LL is negative
+  PASS: Final LL is not NaN
+  PASS: Root probabilities sum to 1
+    Initial LL: -19310.063315
+    Final LL: -18063.342433
+    Improvement: 1246.72
+    Time: 67.71 seconds
+
+========== Stage 7: Full Pipeline (Manager) ==========
+
+=== EMBH C Implementation Pipeline ===
+
+Step 1: Reading tree topology from data/RAxML_bipartitions.CDS_FcC_partition.edgelist
+Number of edges in topology file is 73
+  Created 74 vertices
+
+Step 2: Reading patterns from data/patterns_1000.pat
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+  Loaded 648 patterns
+
+Step 3: Rooting tree at h_0
+  Root set to h_0 (id=0)
+
+Step 4: Setting up tree structure
+Number of non-root vertices is 73
+  Number of leaves: 38
+  Number of non-root vertices: 73
+
+Step 5: Setting F81 model from data/patterns_1000.basecomp
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+  Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+  F81 mu: 1.340988
+  Set F81 matrices for 73 edges
+
+=== Computing log-likelihood using pruning algorithm ===
+Log-likelihood (pruning): -19310.06331508588
+
+=== Computing log-likelihood using propagation algorithm ===
+Constructed clique tree with 73 cliques, 37 leaves
+Log-likelihood (propagation): -19310.06331508588
+
+=== Running EM algorithm with Aitken acceleration ===
+
+====================================================
+EM with Aitken Acceleration
+====================================================
+Initial LL: -19310.06
+Number of sites: 1000
+Convergence tolerance: 1.00e-02 (1.00e-05 per site)
+----------------------------------------------------------------------
+Iter   1: LL = -18197.29 (+1.11e+03)
+Iter   2: LL = -18121.63 (+7.57e+01)
+Iter   3: LL = -18096.90 (+2.47e+01) | Rate: 0.327 | Aitken LL: -18084.88 | Dist: 1.20e+01
+Iter   4: LL = -18084.83 (+1.21e+01) | Rate: 0.488 | Aitken LL: -18073.35 | Dist: 1.15e+01
+Iter   5: LL = -18078.01 (+6.83e+00) | Rate: 0.566 | Aitken LL: -18069.11 | Dist: 8.90e+00
+Iter   6: LL = -18073.89 (+4.11e+00) | Rate: 0.602 | Aitken LL: -18067.66 | Dist: 6.23e+00
+Iter   7: LL = -18071.28 (+2.61e+00) | Rate: 0.635 | Aitken LL: -18066.75 | Dist: 4.53e+00
+Iter   8: LL = -18069.54 (+1.74e+00) | Rate: 0.667 | Aitken LL: -18066.05 | Dist: 3.49e+00
+Iter   9: LL = -18068.33 (+1.21e+00) | Rate: 0.695 | Aitken LL: -18065.57 | Dist: 2.76e+00
+Iter  10: LL = -18067.47 (+8.65e-01) | Rate: 0.715 | Aitken LL: -18065.30 | Dist: 2.17e+00
+Iter  11: LL = -18066.84 (+6.26e-01) | Rate: 0.724 | Aitken LL: -18065.20 | Dist: 1.64e+00
+Iter  12: LL = -18066.38 (+4.57e-01) | Rate: 0.729 | Aitken LL: -18065.16 | Dist: 1.23e+00
+Iter  13: LL = -18066.04 (+3.39e-01) | Rate: 0.743 | Aitken LL: -18065.06 | Dist: 9.80e-01
+Iter  14: LL = -18065.78 (+2.61e-01) | Rate: 0.769 | Aitken LL: -18064.91 | Dist: 8.68e-01
+Iter  15: LL = -18065.57 (+2.09e-01) | Rate: 0.802 | Aitken LL: -18064.73 | Dist: 8.47e-01
+Iter  16: LL = -18065.40 (+1.75e-01) | Rate: 0.836 | Aitken LL: -18064.51 | Dist: 8.91e-01
+Iter  17: LL = -18065.25 (+1.52e-01) | Rate: 0.868 | Aitken LL: -18064.25 | Dist: 1.00e+00
+Iter  18: LL = -18065.11 (+1.36e-01) | Rate: 0.898 | Aitken LL: -18063.92 | Dist: 1.19e+00
+Iter  19: LL = -18064.99 (+1.26e-01) | Rate: 0.924 | Aitken LL: -18063.46 | Dist: 1.52e+00
+Iter  20: LL = -18064.87 (+1.19e-01) | Rate: 0.946 | Aitken LL: -18062.77 | Dist: 2.10e+00
+Iter  21: LL = -18064.75 (+1.15e-01) | Rate: 0.965 | Aitken: disabled
+Iter  22: LL = -18064.64 (+1.13e-01) | Rate: 0.979 | Aitken: disabled
+Iter  23: LL = -18064.53 (+1.11e-01) | Rate: 0.988 | Aitken: disabled
+Iter  24: LL = -18064.42 (+1.10e-01) | Rate: 0.991 | Aitken: disabled
+Iter  25: LL = -18064.31 (+1.09e-01) | Rate: 0.987 | Aitken: disabled
+Iter  26: LL = -18064.20 (+1.06e-01) | Rate: 0.976 | Aitken: disabled
+Iter  27: LL = -18064.10 (+1.02e-01) | Rate: 0.959 | Aitken: disabled
+Iter  28: LL = -18064.00 (+9.58e-02) | Rate: 0.940 | Aitken LL: -18062.50 | Dist: 1.51e+00
+Iter  29: LL = -18063.92 (+8.82e-02) | Rate: 0.921 | Aitken LL: -18062.89 | Dist: 1.03e+00
+Iter  30: LL = -18063.84 (+7.98e-02) | Rate: 0.904 | Aitken LL: -18063.08 | Dist: 7.52e-01
+Iter  31: LL = -18063.77 (+7.10e-02) | Rate: 0.891 | Aitken LL: -18063.19 | Dist: 5.80e-01
+Iter  32: LL = -18063.70 (+6.26e-02) | Rate: 0.881 | Aitken LL: -18063.24 | Dist: 4.65e-01
+Iter  33: LL = -18063.65 (+5.48e-02) | Rate: 0.875 | Aitken LL: -18063.26 | Dist: 3.83e-01
+Iter  34: LL = -18063.60 (+4.77e-02) | Rate: 0.870 | Aitken LL: -18063.28 | Dist: 3.20e-01
+Iter  35: LL = -18063.56 (+4.13e-02) | Rate: 0.867 | Aitken LL: -18063.29 | Dist: 2.70e-01
+Iter  36: LL = -18063.52 (+3.57e-02) | Rate: 0.865 | Aitken LL: -18063.29 | Dist: 2.29e-01
+Iter  37: LL = -18063.49 (+3.09e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.95e-01
+Iter  38: LL = -18063.47 (+2.67e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.70e-01
+Iter  39: LL = -18063.44 (+2.31e-02) | Rate: 0.866 | Aitken LL: -18063.29 | Dist: 1.50e-01
+Iter  40: LL = -18063.42 (+2.01e-02) | Rate: 0.870 | Aitken LL: -18063.29 | Dist: 1.35e-01
+Iter  41: LL = -18063.40 (+1.76e-02) | Rate: 0.875 | Aitken LL: -18063.28 | Dist: 1.23e-01
+Iter  42: LL = -18063.39 (+1.55e-02) | Rate: 0.881 | Aitken LL: -18063.28 | Dist: 1.14e-01
+Iter  43: LL = -18063.38 (+1.37e-02) | Rate: 0.887 | Aitken LL: -18063.27 | Dist: 1.08e-01
+Iter  44: LL = -18063.36 (+1.23e-02) | Rate: 0.893 | Aitken LL: -18063.26 | Dist: 1.02e-01
+Iter  45: LL = -18063.35 (+1.10e-02) | Rate: 0.899 | Aitken LL: -18063.25 | Dist: 9.83e-02
+Iter  46: LL = -18063.34 (+9.98e-03) | Rate: 0.905 | Aitken LL: -18063.25 | Dist: 9.51e-02
+Converged (standard criterion)
+----------------------------------------------------------------------
+Converged after 46 iterations
+
+====================================================
+Final Results:
+  Initial LL:  -19310.06
+  Final LL:    -18063.34
+  Improvement: 1246.72
+  Iterations:  46
+  LL/site:     -18.063342
+====================================================
+Final log-likelihood after EM: -18063.34243281581
+
+=== Evaluating BH model at root h_5 ===
+Re-rooting tree at h_5
+Number of non-root vertices is 73
+Log-likelihood with root at h_5: -19380.05735490411
+
+=== Pipeline Complete ===
+  PASS: Create manager
+  PASS: Manager has SEM instance
+  PASS: EM converged to good solution
+  PASS: Different roots have different likelihoods
+    Max LL at h_0: -18063.342433
+    LL at h_5: -19380.057355
+
+========== Performance Benchmarking ==========
+Number of edges in topology file is 73
+Read 38 taxa from taxon order file
+Found 648 patterns in file
+Number of unique site patterns is 648
+Packed storage memory: 9234 bytes (62.50% savings)
+Number of non-root vertices is 73
+Root probability (pi): [0.287675, 0.197608, 0.259430, 0.255286]
+F81 mu is 1.340988
+Constructed clique tree with 73 cliques, 37 leaves
+    Pruning algorithm: 61.32 ms/evaluation (avg of 10 runs)
+    Propagation algorithm: 783.98 ms/evaluation (avg of 10 runs)
+    Patterns: 648, Taxa: 38, Vertices: 74
+  PASS: Pruning completes in < 1 second
+  PASS: Propagation completes in < 1 second
+
+============================================
+TEST SUMMARY
+============================================
+Total tests: 71
+Passed: 71
+Failed: 0
+Warnings: 0
+Total time: 147.02 seconds
+============================================
+
+*** ALL TESTS PASSED ***
+EMBH C Implementation FULLY VALIDATED
+==215384== 
+==215384== HEAP SUMMARY:
+==215384==     in use at exit: 0 bytes in 0 blocks
+==215384==   total heap usage: 226,234 allocs, 226,234 frees, 7,601,496 bytes allocated
+==215384== 
+==215384== All heap blocks were freed -- no leaks are possible
+==215384== 
+==215384== For lists of detected and suppressed errors, rerun with: -s
+==215384== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

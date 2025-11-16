@@ -1,0 +1,194 @@
+bin/embh -e data/RAxML_bipartitions.CDS_FcC_partition.edgelist -p data/patterns_1000.pat -x data/patterns_1000.taxon_order -b data/patterns_1000.basecomp -o h_0 -c h_5
+edge list file is: data/RAxML_bipartitions.CDS_FcC_partition.edgelist
+pattern file name is: data/patterns_1000.pat
+taxon order file name is: data/patterns_1000.taxon_order
+base composition file name is: data/patterns_1000.basecomp
+root optimize name is: h_0
+root check name is: h_5
+number of edges in topology file is 73
+
+=== Loading patterns from file ===
+Loaded 648 patterns with 38 taxa
+Memory usage: 9234 bytes (3-bit packed)
+Memory savings: 90.625% compared to int storage
+Marked 38 vertices as observed (leaves)
+Number of non-root vertices is 73
+Number of unique site patterns is 648
+F81 mu is 1.34099
+number of non-root vertices is 73
+
+=== Computing log-likelihood using OPTIMIZED propagation algorithm ===
+log-likelihood using OPTIMIZED propagation algorithm is -19310.063311
+
+=== Computing log-likelihood using MEMOIZED propagation algorithm ===
+
+=== Memoization Statistics ===
+Upward messages (leaves to root):
+  Cache hits: 39574
+  Cache misses: 7082
+  Hit rate: 84.820816187%
+  Messages saved: 39574 out of 46656 upward messages
+Downward messages (root to leaves):
+  Cache hits: 2502
+  Cache misses: 44154
+  Hit rate: 5.362654321%
+Memoized computation time: 426.232 ms
+Log-likelihood (memoized): -19310.063311
+Cache statistics written to cache_statistics.csv
+
+Regular computation time: 333.996 ms
+Log-likelihood (regular): -19310.063311
+
+Speedup factor: 0.78360141895x
+Time saved: -92.236 ms
+
+Log-likelihood difference: 0
+PASS: Memoized and regular results match!
+log-likelihood using MEMOIZED propagation algorithm is -19310.063311
+
+====================================================
+EM with Aitken Acceleration (F81 initialization)
+====================================================
+Initial LL: -19310.06
+Number of sites: 1000
+Convergence tolerance: 1.00e-02 (1.00e-05 per site)
+----------------------------------------------------------------------
+Iter   1: LL = -18197.29 (+1.11e+03)
+Iter   2: LL = -18121.63 (+7.57e+01)
+Iter   3: LL = -18096.90 (+2.47e+01) | Rate: 0.327 | Aitken LL: -18084.88 | Dist: 1.20e+01
+Iter   4: LL = -18084.83 (+1.21e+01) | Rate: 0.488 | Aitken LL: -18073.35 | Dist: 1.15e+01
+Iter   5: LL = -18078.01 (+6.83e+00) | Rate: 0.566 | Aitken LL: -18069.11 | Dist: 8.90e+00
+Iter   6: LL = -18073.89 (+4.11e+00) | Rate: 0.602 | Aitken LL: -18067.66 | Dist: 6.23e+00
+Iter   7: LL = -18071.28 (+2.61e+00) | Rate: 0.635 | Aitken LL: -18066.75 | Dist: 4.53e+00
+Iter   8: LL = -18069.54 (+1.74e+00) | Rate: 0.667 | Aitken LL: -18066.05 | Dist: 3.49e+00
+Iter   9: LL = -18068.33 (+1.21e+00) | Rate: 0.695 | Aitken LL: -18065.57 | Dist: 2.76e+00
+Iter  10: LL = -18067.47 (+8.65e-01) | Rate: 0.715 | Aitken LL: -18065.30 | Dist: 2.17e+00
+Iter  11: LL = -18066.84 (+6.26e-01) | Rate: 0.724 | Aitken LL: -18065.20 | Dist: 1.64e+00
+Iter  12: LL = -18066.38 (+4.57e-01) | Rate: 0.729 | Aitken LL: -18065.16 | Dist: 1.23e+00
+Iter  13: LL = -18066.04 (+3.39e-01) | Rate: 0.743 | Aitken LL: -18065.06 | Dist: 9.80e-01
+Iter  14: LL = -18065.78 (+2.61e-01) | Rate: 0.769 | Aitken LL: -18064.91 | Dist: 8.68e-01
+Iter  15: LL = -18065.57 (+2.09e-01) | Rate: 0.802 | Aitken LL: -18064.73 | Dist: 8.47e-01
+Iter  16: LL = -18065.40 (+1.75e-01) | Rate: 0.836 | Aitken LL: -18064.51 | Dist: 8.91e-01
+Iter  17: LL = -18065.25 (+1.52e-01) | Rate: 0.868 | Aitken LL: -18064.25 | Dist: 1.00e+00
+Iter  18: LL = -18065.11 (+1.36e-01) | Rate: 0.898 | Aitken LL: -18063.92 | Dist: 1.19e+00
+Iter  19: LL = -18064.99 (+1.26e-01) | Rate: 0.924 | Aitken LL: -18063.46 | Dist: 1.52e+00
+Iter  20: LL = -18064.87 (+1.19e-01) | Rate: 0.946 | Aitken LL: -18062.77 | Dist: 2.10e+00
+Iter  21: LL = -18064.75 (+1.15e-01) | Rate: 0.965 | Aitken: disabled (rate too high)
+Iter  22: LL = -18064.64 (+1.13e-01) | Rate: 0.979 | Aitken: disabled (rate too high)
+Iter  23: LL = -18064.53 (+1.11e-01) | Rate: 0.988 | Aitken: disabled (rate too high)
+Iter  24: LL = -18064.42 (+1.10e-01) | Rate: 0.991 | Aitken: disabled (rate too high)
+Iter  25: LL = -18064.31 (+1.09e-01) | Rate: 0.987 | Aitken: disabled (rate too high)
+Iter  26: LL = -18064.20 (+1.06e-01) | Rate: 0.976 | Aitken: disabled (rate too high)
+Iter  27: LL = -18064.10 (+1.02e-01) | Rate: 0.959 | Aitken: disabled (rate too high)
+Iter  28: LL = -18064.00 (+9.58e-02) | Rate: 0.940 | Aitken LL: -18062.50 | Dist: 1.51e+00
+Iter  29: LL = -18063.92 (+8.82e-02) | Rate: 0.921 | Aitken LL: -18062.89 | Dist: 1.03e+00
+Iter  30: LL = -18063.84 (+7.98e-02) | Rate: 0.904 | Aitken LL: -18063.08 | Dist: 7.52e-01
+Iter  31: LL = -18063.77 (+7.10e-02) | Rate: 0.891 | Aitken LL: -18063.19 | Dist: 5.80e-01
+Iter  32: LL = -18063.70 (+6.26e-02) | Rate: 0.881 | Aitken LL: -18063.24 | Dist: 4.65e-01
+Iter  33: LL = -18063.65 (+5.48e-02) | Rate: 0.875 | Aitken LL: -18063.26 | Dist: 3.83e-01
+Iter  34: LL = -18063.60 (+4.77e-02) | Rate: 0.870 | Aitken LL: -18063.28 | Dist: 3.20e-01
+Iter  35: LL = -18063.56 (+4.13e-02) | Rate: 0.867 | Aitken LL: -18063.29 | Dist: 2.70e-01
+Iter  36: LL = -18063.52 (+3.57e-02) | Rate: 0.865 | Aitken LL: -18063.29 | Dist: 2.29e-01
+Iter  37: LL = -18063.49 (+3.09e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.95e-01
+Iter  38: LL = -18063.47 (+2.67e-02) | Rate: 0.864 | Aitken LL: -18063.30 | Dist: 1.70e-01
+Iter  39: LL = -18063.44 (+2.31e-02) | Rate: 0.866 | Aitken LL: -18063.29 | Dist: 1.50e-01
+Iter  40: LL = -18063.42 (+2.01e-02) | Rate: 0.870 | Aitken LL: -18063.29 | Dist: 1.35e-01
+Iter  41: LL = -18063.40 (+1.76e-02) | Rate: 0.875 | Aitken LL: -18063.28 | Dist: 1.23e-01
+Iter  42: LL = -18063.39 (+1.55e-02) | Rate: 0.881 | Aitken LL: -18063.28 | Dist: 1.14e-01
+Iter  43: LL = -18063.38 (+1.37e-02) | Rate: 0.887 | Aitken LL: -18063.27 | Dist: 1.08e-01
+Iter  44: LL = -18063.36 (+1.23e-02) | Rate: 0.893 | Aitken LL: -18063.26 | Dist: 1.02e-01
+Iter  45: LL = -18063.35 (+1.10e-02) | Rate: 0.899 | Aitken LL: -18063.25 | Dist: 9.83e-02
+Iter  46: LL = -18063.34 (+9.98e-03) | Rate: 0.905 | Aitken LL: -18063.25 | Dist: 9.51e-02
+----------------------------------------------------------------------
+Converged after 46 iterations
+Reason: Standard criterion (improvement < 0.010000)
+
+====================================================
+Final Results:
+  Initial LL:  -19310.06
+  Final LL:    -18063.34
+  Improvement: 1246.72
+  Iterations:  46
+  LL/site:     -18.063342
+====================================================
+Log-likelihood with root at h_5 is -18063.34243281077579
+Reference log-likelihood (at root clique): -18063.34243281078
+
+Verifying log-likelihood computation at all 73 cliques:
+  PASSED: Clique 6-7 (X=h_5, Y=Cep) LL=-18063.34243281078
+  PASSED: Clique 6-11 (X=h_5, Y=h_6) LL=-18063.34243281078
+  PASSED: Clique 6-15 (X=h_5, Y=h_4) LL=-18063.34243281077
+  PASSED: Clique 15-21 (X=h_4, Y=h_9) LL=-18063.34243281078
+  PASSED: Clique 15-4 (X=h_4, Y=h_3) LL=-18063.34243281078
+  PASSED: Clique 4-5 (X=h_3, Y=Sci) LL=-18063.34243281078
+  PASSED: Clique 4-23 (X=h_3, Y=h_2) LL=-18063.34243281078
+  PASSED: Clique 23-61 (X=h_2, Y=h_12) LL=-18063.34243281078
+  PASSED: Clique 23-2 (X=h_2, Y=h_1) LL=-18063.34243281078
+  PASSED: Clique 2-3 (X=h_1, Y=Ara) LL=-18063.34243281078
+  PASSED: Clique 2-0 (X=h_1, Y=h_0) LL=-18063.34243281078
+  PASSED: Clique 0-1 (X=h_0, Y=Nag) LL=-18063.34243281078
+  PASSED: Clique 0-73 (X=h_0, Y=Pod) LL=-18063.34243281078
+  PASSED: Clique 61-55 (X=h_12, Y=h_13) LL=-18063.34243281078
+  PASSED: Clique 61-67 (X=h_12, Y=h_31) LL=-18063.34243281078
+  PASSED: Clique 67-62 (X=h_31, Y=h_32) LL=-18063.34243281078
+  PASSED: Clique 67-68 (X=h_31, Y=h_34) LL=-18063.34243281078
+  PASSED: Clique 68-69 (X=h_34, Y=Abi) LL=-18063.34243281078
+  PASSED: Clique 68-70 (X=h_34, Y=h_35) LL=-18063.34243281078
+  PASSED: Clique 70-71 (X=h_35, Y=Pin) LL=-18063.34243281078
+  PASSED: Clique 70-72 (X=h_35, Y=smi) LL=-18063.34243281078
+  PASSED: Clique 62-63 (X=h_32, Y=Eph) LL=-18063.34243281078
+  PASSED: Clique 62-64 (X=h_32, Y=h_33) LL=-18063.34243281078
+  PASSED: Clique 64-65 (X=h_33, Y=Gne) LL=-18063.34243281077
+  PASSED: Clique 64-66 (X=h_33, Y=Wel) LL=-18063.34243281078
+  PASSED: Clique 55-29 (X=h_13, Y=h_14) LL=-18063.34243281078
+  PASSED: Clique 55-59 (X=h_13, Y=h_29) LL=-18063.34243281078
+  PASSED: Clique 59-56 (X=h_29, Y=h_30) LL=-18063.34243281078
+  PASSED: Clique 59-60 (X=h_29, Y=Gin) LL=-18063.34243281078
+  PASSED: Clique 56-57 (X=h_30, Y=Zam) LL=-18063.34243281078
+  PASSED: Clique 56-58 (X=h_30, Y=Cyc) LL=-18063.34243281078
+  PASSED: Clique 29-24 (X=h_14, Y=h_15) LL=-18063.34243281078
+  PASSED: Clique 29-30 (X=h_14, Y=h_17) LL=-18063.34243281078
+  PASSED: Clique 30-31 (X=h_17, Y=Atr) LL=-18063.34243281077
+  PASSED: Clique 30-32 (X=h_17, Y=h_18) LL=-18063.34243281078
+  PASSED: Clique 32-33 (X=h_18, Y=Nad) LL=-18063.34243281078
+  PASSED: Clique 32-41 (X=h_18, Y=h_19) LL=-18063.34243281078
+  PASSED: Clique 41-37 (X=h_19, Y=h_20) LL=-18063.34243281078
+  PASSED: Clique 41-53 (X=h_19, Y=h_23) LL=-18063.34243281078
+  PASSED: Clique 53-51 (X=h_23, Y=h_24) LL=-18063.34243281077
+  PASSED: Clique 53-54 (X=h_23, Y=Ltu) LL=-18063.34243281077
+  PASSED: Clique 51-42 (X=h_24, Y=h_25) LL=-18063.34243281078
+  PASSED: Clique 51-52 (X=h_24, Y=Aco) LL=-18063.34243281077
+  PASSED: Clique 42-43 (X=h_25, Y=Vvi) LL=-18063.34243281078
+  PASSED: Clique 42-49 (X=h_25, Y=h_26) LL=-18063.34243281078
+  PASSED: Clique 49-44 (X=h_26, Y=h_27) LL=-18063.34243281077
+  PASSED: Clique 49-50 (X=h_26, Y=Sly) LL=-18063.34243281078
+  PASSED: Clique 44-45 (X=h_27, Y=Gma) LL=-18063.34243281077
+  PASSED: Clique 44-46 (X=h_27, Y=h_28) LL=-18063.34243281078
+  PASSED: Clique 46-47 (X=h_28, Y=Ptr) LL=-18063.34243281077
+  PASSED: Clique 46-48 (X=h_28, Y=Ath) LL=-18063.34243281077
+  PASSED: Clique 37-34 (X=h_20, Y=h_21) LL=-18063.34243281078
+  PASSED: Clique 37-38 (X=h_20, Y=h_22) LL=-18063.34243281078
+  PASSED: Clique 38-39 (X=h_22, Y=Osa) LL=-18063.34243281078
+  PASSED: Clique 38-40 (X=h_22, Y=Bdi) LL=-18063.34243281078
+  PASSED: Clique 34-35 (X=h_21, Y=Pda) LL=-18063.34243281077
+  PASSED: Clique 34-36 (X=h_21, Y=Mac) LL=-18063.34243281078
+  PASSED: Clique 24-25 (X=h_15, Y=Lja) LL=-18063.34243281078
+  PASSED: Clique 24-26 (X=h_15, Y=h_16) LL=-18063.34243281078
+  PASSED: Clique 26-27 (X=h_16, Y=Paq) LL=-18063.34243281078
+  PASSED: Clique 26-28 (X=h_16, Y=Cga) LL=-18063.34243281078
+  PASSED: Clique 21-16 (X=h_9, Y=h_10) LL=-18063.34243281078
+  PASSED: Clique 21-22 (X=h_9, Y=Cun) LL=-18063.34243281078
+  PASSED: Clique 16-17 (X=h_10, Y=Met) LL=-18063.34243281078
+  PASSED: Clique 16-18 (X=h_10, Y=h_11) LL=-18063.34243281078
+  PASSED: Clique 18-19 (X=h_11, Y=Pla) LL=-18063.34243281078
+  PASSED: Clique 18-20 (X=h_11, Y=Fok) LL=-18063.34243281078
+  PASSED: Clique 11-8 (X=h_6, Y=h_7) LL=-18063.34243281078
+  PASSED: Clique 11-12 (X=h_6, Y=h_8) LL=-18063.34243281078
+  PASSED: Clique 12-13 (X=h_8, Y=Pse) LL=-18063.34243281077
+  PASSED: Clique 12-14 (X=h_8, Y=Tax) LL=-18063.34243281078
+  PASSED: Clique 8-9 (X=h_7, Y=Ame) LL=-18063.34243281078
+  PASSED: Clique 8-10 (X=h_7, Y=Tor) LL=-18063.34243281078
+
+Verification summary:
+  Passed: 73/73
+  All cliques compute the same log-likelihood!

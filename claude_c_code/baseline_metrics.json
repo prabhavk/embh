@@ -1,0 +1,38 @@
+{
+  "baseline_date": "2024-11-16",
+  "data_files": {
+    "edge_list": "data/RAxML_bipartitions.CDS_FcC_partition.edgelist",
+    "patterns": "data/patterns_1000.pat",
+    "taxon_order": "data/patterns_1000.taxon_order",
+    "base_comp": "data/patterns_1000.basecomp",
+    "root_optimize": "h_0",
+    "root_check": "h_5"
+  },
+  "data_summary": {
+    "num_patterns": 648,
+    "num_taxa": 38,
+    "num_edges": 73,
+    "memory_bytes": 9234,
+    "memory_savings_percent": 90.625,
+    "f81_mu": 1.34099
+  },
+  "log_likelihoods": {
+    "propagation_optimized": -19310.063311,
+    "propagation_memoized": -19310.063311,
+    "initial_ll": -19310.06,
+    "final_ll_after_em": -18063.34243281077579,
+    "ll_per_site": -18.063342
+  },
+  "em_convergence": {
+    "iterations": 46,
+    "initial_ll": -19310.06,
+    "final_ll": -18063.34,
+    "improvement": 1246.72,
+    "convergence_tolerance": 0.01
+  },
+  "verification": {
+    "cliques_passed": 73,
+    "cliques_total": 73,
+    "all_cliques_match": true
+  }
+}

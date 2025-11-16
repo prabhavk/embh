@@ -3935,7 +3935,7 @@ public:
 	void ComputeInitialEstimateOfModelParametersForTrifle(int layer);
 	void BumpZeroEntriesOfModelParameters();
 	void SetInitialEstimateOfModelParametersUsingDirichlet();
-	void SetInitialEstimateOfModelParametersUsingHSS();
+	void SetModelParametersUsingHSS();
 	void TransformRootedTreeToBifurcatingTree();
 	void SwapRoot();
 	void SuppressRoot();

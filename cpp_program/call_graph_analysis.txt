@@ -1,0 +1,59 @@
+MANAGER CONSTRUCTOR CALL GRAPH ANALYSIS
+======================================================================
+
+SEM METHODS REQUIRED (sorted by line number):
+----------------------------------------------------------------------
+GetVertex: lines 1695-1707 (13 lines)
+GetVertexId: lines 1709-1722 (14 lines)
+ConvertDNAtoIndex: lines 1789-1810 (22 lines)
+SetVertexVector: lines 1812-1819 (8 lines)
+SetVertexVectorExceptRoot: lines 1821-1828 (8 lines)
+ReparameterizeBH: lines 1834-1881 (48 lines)
+AddToExpectedCountsForEachVariable: lines 2622-2642 (21 lines)
+AddToExpectedCountsForEachEdge: lines 2711-2730 (20 lines)
+ComputeExpectedCounts: lines 2826-2860 (35 lines)
+ComputeMarginalProbabilitiesUsingExpectedCounts: lines 2900-2957 (58 lines)
+ConstructCliqueTree: lines 2959-3019 (61 lines)
+ResetExpectedCounts: lines 3021-3044 (24 lines)
+InitializeExpectedCountsForEachVariable: lines 3046-3061 (16 lines)
+InitializeExpectedCountsForEachEdge: lines 3092-3108 (17 lines)
+ReadPatternsFromFile: lines 3359-3433 (75 lines)
+StorePatternIndex: lines 3436-3461 (26 lines)
+ComputeLogLikelihood: lines 3467-3567 (101 lines)
+ComputeLogLikelihoodUsingPatterns: lines 3569-3736 (168 lines)
+ComputeLogLikelihoodUsingPatternsWithPropagation: lines 3738-3813 (76 lines)
+embh_aitken: lines 4101-4260 (160 lines)
+ComputeMLEstimateOfBHGivenExpectedDataCompletion: lines 5208-5237 (30 lines)
+RootTreeAtVertex: lines 5264-5287 (24 lines)
+ClearDirectedEdges: lines 5289-5300 (12 lines)
+ResetTimesVisited: lines 5325-5331 (7 lines)
+EvaluateBHModelWithRootAtCheck: lines 5491-5499 (9 lines)
+SetModelParametersUsingHSS: lines 5501-5519 (19 lines)
+ResetLogScalingFactors: lines 5624-5628 (5 lines)
+SetEdgesForTreeTraversalOperations: lines 5981-5986 (6 lines)
+SetEdgesForPreOrderTraversal: lines 5988-6004 (17 lines)
+SetLeaves: lines 6006-6013 (8 lines)
+SetEdgesForPostOrderTraversal: lines 6015-6042 (28 lines)
+SetVerticesForPreOrderTraversalWithoutLeaves: lines 6045-6052 (8 lines)
+SetEdgesFromTopologyFile: lines 6177-6227 (51 lines)
+SetRootProbabilityAsSampleBaseComposition: lines 6229-6255 (27 lines)
+SetF81_mu: lines 6257-6270 (14 lines)
+SetF81Model: lines 6293-6298 (6 lines)
+CompressDNASequences: lines 6300-6437 (138 lines)
+SetDNASequencesFromFile: lines 6439-6496 (58 lines)
+ContainsVertex: lines 6511-6517 (7 lines)
+AddVertex: lines 6519-6526 (8 lines)
+
+TOTAL: 40 methods, ~-173889 lines
+
+
+MEMBER VARIABLES:
+----------------------------------------------------------------------
+  P
+  RunEMWithAitke
+  SetDNAMa
+  mapDNAtoInteger
+  max_EM_iter
+  max_log_lik
+  prefix_for_output_files
+  verbose
