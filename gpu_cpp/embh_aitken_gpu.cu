@@ -943,6 +943,516 @@ void embh_aitken_gpu(EMBHTree& tree, int max_iter, const string& output_file_pat
     cudaFree(d_pattern_ll);
 }
 
+// =============================================================================
+// Aitken-Accelerated Parameter Convergence for BH Model
+// =============================================================================
+
+// Helper: Flatten tree parameters into a vector
+vector<double> flatten_parameters(const EMBHTree& tree) {
+    int num_edges = tree.transition_matrices.size();
+    vector<double> params;
+    params.reserve(num_edges * 16 + 4);
+
+    // Flatten transition matrices
+    for (int e = 0; e < num_edges; e++) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                params.push_back(tree.transition_matrices[e][i][j]);
+            }
+        }
+    }
+
+    // Append root probabilities
+    for (int i = 0; i < 4; i++) {
+        params.push_back(tree.root_probabilities[i]);
+    }
+
+    return params;
+}
+
+// Helper: Unflatten vector back to tree parameters
+void unflatten_parameters(EMBHTree& tree, const vector<double>& params) {
+    int num_edges = tree.transition_matrices.size();
+    int idx = 0;
+
+    // Unflatten transition matrices
+    for (int e = 0; e < num_edges; e++) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                tree.transition_matrices[e][i][j] = params[idx++];
+            }
+        }
+    }
+
+    // Unflatten root probabilities
+    for (int i = 0; i < 4; i++) {
+        tree.root_probabilities[i] = params[idx++];
+    }
+}
+
+// Helper: Project parameters back to valid space
+void project_parameters(vector<double>& params, int num_edges) {
+    const double eps = 1e-9;
+    int idx = 0;
+
+    // Project transition matrices: rows must sum to 1, all elements non-negative
+    for (int e = 0; e < num_edges; e++) {
+        for (int i = 0; i < 4; i++) {
+            double row_sum = 0.0;
+            for (int j = 0; j < 4; j++) {
+                // Ensure non-negative
+                if (params[idx + j] < eps) params[idx + j] = eps;
+                row_sum += params[idx + j];
+            }
+            // Normalize row
+            for (int j = 0; j < 4; j++) {
+                params[idx + j] /= row_sum;
+            }
+            idx += 4;
+        }
+    }
+
+    // Project root probabilities: must sum to 1, all non-negative
+    double sum = 0.0;
+    for (int i = 0; i < 4; i++) {
+        if (params[idx + i] < eps) params[idx + i] = eps;
+        sum += params[idx + i];
+    }
+    for (int i = 0; i < 4; i++) {
+        params[idx + i] /= sum;
+    }
+}
+
+// GPU EMBH with Aitken-Accelerated Parameter Convergence
+void embh_aitken_acc_bh_convergence(EMBHTree& tree, int max_iter, const string& output_file_path = "",
+                                     double aitken_alpha = 0.3, int aitken_start_iter = 5) {
+    const double MAX_RATE = 0.95;
+    const int MIN_AITKEN = 3;
+    const double LAMBDA_MAX = 1.5;
+    const double LAMBDA_MIN_DENOM = 0.05;  // |1 - lambda| must be > this
+
+    int num_sites = 0;
+    for (int w : tree.pattern_weights) num_sites += w;
+
+    const double TOL = 1e-5 * num_sites;
+
+    // Open output file for results
+    ofstream outfile;
+    if (!output_file_path.empty()) {
+        outfile.open(output_file_path);
+        if (!outfile.is_open()) {
+            cerr << "Warning: Could not open " << output_file_path << " for writing" << endl;
+        } else {
+            outfile << "# EM Results with Aitken Parameter Acceleration" << endl;
+            outfile << "# Patterns: " << tree.num_patterns << ", Sites: " << num_sites << endl;
+            outfile << "# iter,LL,ECDLL,improvement,rate,aitken_dist,gpu_time_ms,accelerated" << endl;
+        }
+    }
+
+    int num_nodes = tree.node_names.size();
+    int num_edges = tree.edge_child_nodes.size();
+    int num_params = num_edges * 16 + 4;
+
+    cout << "\n=== GPU EMBH with Aitken Parameter Acceleration ===" << endl;
+    cout << "Parameter vector size: " << num_params << endl;
+    cout << "Aitken step size (alpha): " << aitken_alpha << endl;
+    cout << "Aitken starts at iteration: " << aitken_start_iter << endl;
+    cout << "\nAllocating GPU memory..." << endl;
+
+    // GPU arrays (same as embh_aitken_gpu)
+    int *d_post_order, *d_edge_child, *d_edge_parent;
+    bool *d_is_leaf;
+    int *d_leaf_taxon;
+    int *d_node_nch, *d_node_off, *d_node_edges;
+    int *d_root_edges;
+    uint8_t *d_bases;
+    int *d_weights;
+    double *d_root_probs, *d_trans;
+    double *d_up_msg, *d_up_scale;
+    double *d_down_msg, *d_down_scale;
+    double *d_counts, *d_pattern_ll;
+
+    CUDA_CHECK(cudaMalloc(&d_post_order, num_edges * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_edge_child, num_edges * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_edge_parent, num_edges * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_is_leaf, num_nodes * sizeof(bool)));
+    CUDA_CHECK(cudaMalloc(&d_leaf_taxon, num_nodes * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_root_edges, tree.root_edge_ids.size() * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_bases, tree.num_patterns * tree.num_taxa * sizeof(uint8_t)));
+    CUDA_CHECK(cudaMalloc(&d_weights, tree.num_patterns * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_root_probs, 4 * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&d_trans, num_edges * 16 * sizeof(double)));
+
+    // Build node children structure
+    vector<int> nch(num_nodes, 0), noff(num_nodes, 0);
+    vector<int> nedges;
+    for (int n = 0; n < num_nodes; n++) {
+        noff[n] = nedges.size();
+        for (int ch : tree.node_children[n]) {
+            for (int e = 0; e < num_edges; e++) {
+                if (tree.edge_child_nodes[e] == ch) {
+                    nedges.push_back(e);
+                    nch[n]++;
+                    break;
+                }
+            }
+        }
+    }
+
+    CUDA_CHECK(cudaMalloc(&d_node_nch, num_nodes * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_node_off, num_nodes * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&d_node_edges, nedges.size() * sizeof(int)));
+
+    size_t msg_sz = (size_t)tree.num_patterns * num_edges * 4 * sizeof(double);
+    size_t scl_sz = (size_t)tree.num_patterns * num_edges * sizeof(double);
+    CUDA_CHECK(cudaMalloc(&d_up_msg, msg_sz));
+    CUDA_CHECK(cudaMalloc(&d_up_scale, scl_sz));
+    CUDA_CHECK(cudaMalloc(&d_down_msg, msg_sz));
+    CUDA_CHECK(cudaMalloc(&d_down_scale, scl_sz));
+    CUDA_CHECK(cudaMalloc(&d_counts, num_edges * 16 * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&d_pattern_ll, tree.num_patterns * sizeof(double)));
+
+    cout << "GPU memory: " << (msg_sz * 2 + scl_sz * 2) / (1024.0 * 1024.0) << " MB" << endl;
+
+    // Copy static data
+    CUDA_CHECK(cudaMemcpy(d_post_order, tree.post_order_edges.data(), num_edges * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_edge_child, tree.edge_child_nodes.data(), num_edges * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_edge_parent, tree.edge_parent_nodes.data(), num_edges * sizeof(int), cudaMemcpyHostToDevice));
+    bool* is_leaf_arr = new bool[num_nodes];
+    for (int i = 0; i < num_nodes; i++) is_leaf_arr[i] = tree.node_is_leaf[i];
+    CUDA_CHECK(cudaMemcpy(d_is_leaf, is_leaf_arr, num_nodes * sizeof(bool), cudaMemcpyHostToDevice));
+    delete[] is_leaf_arr;
+    CUDA_CHECK(cudaMemcpy(d_leaf_taxon, tree.leaf_taxon_indices.data(), num_nodes * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_node_nch, nch.data(), num_nodes * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_node_off, noff.data(), num_nodes * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_node_edges, nedges.data(), nedges.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_root_edges, tree.root_edge_ids.data(), tree.root_edge_ids.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_bases, tree.pattern_bases.data(), tree.num_patterns * tree.num_taxa * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_weights, tree.pattern_weights.data(), tree.num_patterns * sizeof(int), cudaMemcpyHostToDevice));
+
+    // Flatten transition matrices for GPU
+    vector<double> flat_trans(num_edges * 16);
+    auto update_flat = [&]() {
+        for (int e = 0; e < num_edges; e++) {
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    flat_trans[e * 16 + i * 4 + j] = tree.transition_matrices[e][i][j];
+                }
+            }
+        }
+        CUDA_CHECK(cudaMemcpy(d_trans, flat_trans.data(), num_edges * 16 * sizeof(double), cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(d_root_probs, tree.root_probabilities.data(), 4 * sizeof(double), cudaMemcpyHostToDevice));
+    };
+    update_flat();
+
+    // Compute initial log-likelihood
+    auto compute_ll = [&]() {
+        int bs = 256;
+        int nb = (tree.num_patterns + bs - 1) / bs;
+        forward_pass_kernel<<<nb, bs>>>(tree.num_patterns, num_edges, tree.num_taxa,
+            d_post_order, d_edge_child, d_is_leaf, d_leaf_taxon, d_bases, d_trans,
+            d_node_nch, d_node_off, d_node_edges, d_up_msg, d_up_scale);
+
+        compute_pattern_ll_kernel<<<nb, bs>>>(tree.num_patterns, num_edges,
+            d_root_edges, tree.root_edge_ids.size(), d_root_probs, d_up_msg, d_up_scale,
+            d_weights, d_pattern_ll);
+        cudaDeviceSynchronize();
+        vector<double> pll(tree.num_patterns);
+        CUDA_CHECK(cudaMemcpy(pll.data(), d_pattern_ll, tree.num_patterns * sizeof(double), cudaMemcpyDeviceToHost));
+        double total = 0.0;
+        for (double v : pll) total += v;
+        return total;
+    };
+
+    double ll0 = compute_ll();
+    cout << "Initial LL: " << fixed << setprecision(2) << ll0 << endl;
+    cout << "Tolerance: " << scientific << setprecision(2) << TOL << endl;
+    cout << string(80, '-') << endl;
+
+    // Parameter history for Aitken acceleration (keep last 3 iterations)
+    vector<vector<double>> theta_history(3);
+    int hist_idx = 0;
+    theta_history[hist_idx] = flatten_parameters(tree);
+
+    double ll_pp = ll0, ll_p = ll0, ll_c = ll0;
+    int final_iter = 0;
+    bool converged = false;
+    string reason;
+    double gpu_time = 0.0;
+    double final_ecdll = 0.0;
+    int accelerated_steps = 0;
+
+    auto total_start = chrono::high_resolution_clock::now();
+
+    int bs = 256;
+    int nb = (tree.num_patterns + bs - 1) / bs;
+
+    for (int iter = 1; iter <= max_iter; iter++) {
+        final_iter = iter;
+        auto iter_start = chrono::high_resolution_clock::now();
+
+        // E-step: Forward-backward on GPU
+        // Zero out counts before accumulating (important!)
+        CUDA_CHECK(cudaMemset(d_counts, 0, num_edges * 16 * sizeof(double)));
+
+        forward_pass_kernel<<<nb, bs>>>(tree.num_patterns, num_edges, tree.num_taxa,
+            d_post_order, d_edge_child, d_is_leaf, d_leaf_taxon, d_bases, d_trans,
+            d_node_nch, d_node_off, d_node_edges, d_up_msg, d_up_scale);
+
+        backward_pass_kernel<<<nb, bs>>>(tree.num_patterns, num_edges,
+            d_post_order, d_edge_child, d_edge_parent, d_trans,
+            d_node_nch, d_node_off, d_node_edges,
+            d_root_edges, tree.root_edge_ids.size(), d_root_probs,
+            d_up_msg, d_down_msg, d_down_scale);
+
+        expected_counts_kernel<<<nb, bs>>>(tree.num_patterns, num_edges, tree.num_taxa,
+            d_edge_child, d_is_leaf, d_leaf_taxon, d_bases, d_weights, d_trans,
+            d_up_msg, d_down_msg, d_node_nch, d_node_off, d_node_edges, d_counts);
+        cudaDeviceSynchronize();
+
+        vector<double> counts(num_edges * 16);
+        CUDA_CHECK(cudaMemcpy(counts.data(), d_counts, num_edges * 16 * sizeof(double), cudaMemcpyDeviceToHost));
+
+        auto iter_end = chrono::high_resolution_clock::now();
+        double iter_time = chrono::duration_cast<chrono::microseconds>(iter_end - iter_start).count() / 1000.0;
+        gpu_time += iter_time;
+
+        // Compute ECDLL before M-step
+        double ecdll = 0.0;
+        for (int e = 0; e < num_edges; e++) {
+            for (int ps = 0; ps < 4; ps++) {
+                for (int cs = 0; cs < 4; cs++) {
+                    double expected_count = counts[e * 16 + ps * 4 + cs];
+                    double trans_prob = tree.transition_matrices[e][ps][cs];
+                    if (expected_count > 0 && trans_prob > 0) {
+                        ecdll += expected_count * log(trans_prob);
+                    }
+                }
+            }
+        }
+        if (!tree.root_edge_ids.empty()) {
+            int re = tree.root_edge_ids[0];
+            for (int i = 0; i < 4; i++) {
+                double root_count = 0.0;
+                for (int j = 0; j < 4; j++) {
+                    root_count += counts[re * 16 + i * 4 + j];
+                }
+                if (root_count > 0 && tree.root_probabilities[i] > 0) {
+                    ecdll += root_count * log(tree.root_probabilities[i]);
+                }
+            }
+        }
+        final_ecdll = ecdll;
+
+        // Standard M-step
+        m_step(tree, counts);
+
+        // Store new parameters in history
+        int new_idx = (hist_idx + 1) % 3;
+        theta_history[new_idx] = flatten_parameters(tree);
+
+        bool did_accelerate = false;
+
+        // Try Aitken acceleration if we have enough history
+        if (iter >= aitken_start_iter && iter >= 3) {
+            int idx_km2 = (hist_idx + 1) % 3;  // oldest (k-2)
+            int idx_km1 = (hist_idx + 2) % 3;  // middle (k-1)
+            int idx_k = new_idx;                // newest (k)
+
+            // Compute parameter differences
+            vector<double> dtheta_km2(num_params), dtheta_km1(num_params);
+            for (int i = 0; i < num_params; i++) {
+                dtheta_km2[i] = theta_history[idx_km1][i] - theta_history[idx_km2][i];
+                dtheta_km1[i] = theta_history[idx_k][i] - theta_history[idx_km1][i];
+            }
+
+            // Compute lambda (contraction factor) via least squares
+            double num = 0.0, den = 0.0;
+            for (int i = 0; i < num_params; i++) {
+                num += dtheta_km1[i] * dtheta_km2[i];
+                den += dtheta_km2[i] * dtheta_km2[i];
+            }
+
+            if (den > 1e-20) {
+                double lambda = num / den;
+
+                // Debug: show lambda
+                if (iter <= 10 || iter % 10 == 0) {
+                    cout << "  [DEBUG] lambda=" << fixed << setprecision(4) << lambda;
+                }
+
+                // Check safety conditions
+                if (lambda > 0.0 && lambda < LAMBDA_MAX && fabs(1.0 - lambda) > LAMBDA_MIN_DENOM) {
+                    // Compute Aitken direction: dA = dtheta_km2 / (1 - lambda)
+                    double inv = 1.0 / (1.0 - lambda);
+                    vector<double> theta_accel(num_params);
+
+                    // Try accelerated step with damping
+                    double alpha = aitken_alpha;
+                    double L_base = compute_ll();  // LL with standard M-step result
+
+                    for (int trial = 0; trial < 3; trial++) {
+                        // theta_accel = theta[km2] + alpha * dA
+                        for (int i = 0; i < num_params; i++) {
+                            theta_accel[i] = theta_history[idx_km2][i] + alpha * inv * dtheta_km2[i];
+                        }
+                        project_parameters(theta_accel, num_edges);
+
+                        // Temporarily apply accelerated parameters
+                        unflatten_parameters(tree, theta_accel);
+                        update_flat();
+                        double L_accel = compute_ll();
+
+                        if (iter <= 10 || iter % 10 == 0) {
+                            cout << " trial" << trial << ": L_base=" << fixed << setprecision(2) << L_base
+                                 << " L_accel=" << L_accel;
+                        }
+
+                        if (L_accel > L_base) {
+                            // Accept accelerated step
+                            theta_history[new_idx] = theta_accel;
+                            did_accelerate = true;
+                            accelerated_steps++;
+                            break;
+                        } else {
+                            // Shrink step and retry
+                            alpha *= 0.5;
+                        }
+                    }
+
+                    if (!did_accelerate) {
+                        // Restore standard M-step result
+                        unflatten_parameters(tree, theta_history[new_idx]);
+                    }
+                    if (iter <= 10 || iter % 10 == 0) {
+                        cout << endl;
+                    }
+                } else {
+                    if (iter <= 10 || iter % 10 == 0) {
+                        cout << " (rejected: ";
+                        if (lambda <= 0.0) cout << "lambda<=0";
+                        else if (lambda >= LAMBDA_MAX) cout << "lambda>=MAX";
+                        else cout << "|1-lambda|<=MIN";
+                        cout << ")" << endl;
+                    }
+                }
+            }
+        }
+
+        update_flat();
+        hist_idx = new_idx;
+
+        // Compute new log-likelihood
+        ll_c = compute_ll();
+
+        double imp = ll_c - ll_p;
+        double rate = 0.0, aitken_ll = 0.0, aitken_dist = 0.0;
+        bool use_aitken = false;
+
+        if (iter >= MIN_AITKEN) {
+            double d1 = ll_p - ll_pp;
+            double d2 = ll_c - ll_p;
+            double denom = d2 - d1;
+
+            if (fabs(d1) > 1e-12) rate = fabs(d2 / d1);
+
+            if (fabs(denom) > 1e-10 && rate > 0.01 && rate < MAX_RATE) {
+                aitken_ll = ll_c - (d2 * d2) / denom;
+                aitken_dist = fabs(aitken_ll - ll_c);
+                use_aitken = true;
+            }
+        }
+
+        cout << "Iter " << setw(3) << iter << ": LL = " << fixed << setprecision(2) << ll_c
+             << " | ECDLL = " << fixed << setprecision(2) << ecdll
+             << " (+" << scientific << setprecision(2) << imp << ")"
+             << " | GPU: " << fixed << setprecision(1) << iter_time << "ms";
+
+        if (use_aitken) {
+            cout << " | Rate: " << fixed << setprecision(3) << rate
+                 << " | Aitken: " << scientific << setprecision(2) << aitken_dist;
+        } else if (iter >= MIN_AITKEN) {
+            cout << " | Rate: " << fixed << setprecision(3) << rate;
+        }
+
+        if (did_accelerate) {
+            cout << " [ACC]";
+        }
+        cout << endl;
+
+        // Write iteration data to file
+        if (outfile.is_open()) {
+            outfile << iter << "," << fixed << setprecision(6) << ll_c << ","
+                    << ecdll << "," << imp << "," << rate << "," << aitken_dist << ","
+                    << setprecision(2) << iter_time << "," << (did_accelerate ? 1 : 0) << endl;
+        }
+
+        if (iter >= MIN_AITKEN && rate > 0.95) {
+            converged = true;
+            reason = "Aitken rate > 0.95";
+        } else if (imp < -1e-6) {
+            converged = true;
+            reason = "Likelihood decreased";
+        }
+
+        if (converged) break;
+
+        ll_pp = ll_p;
+        ll_p = ll_c;
+    }
+
+    auto total_end = chrono::high_resolution_clock::now();
+    double total_time = chrono::duration_cast<chrono::milliseconds>(total_end - total_start).count();
+
+    cout << "\n====================================================" << endl;
+    cout << "Final Results (Aitken Parameter Acceleration):" << endl;
+    cout << "  Initial LL:      " << fixed << setprecision(2) << ll0 << endl;
+    cout << "  Final LL:        " << fixed << setprecision(2) << ll_c << endl;
+    cout << "  Improvement:     " << fixed << setprecision(2) << (ll_c - ll0) << endl;
+    cout << "  Iterations:      " << final_iter << endl;
+    cout << "  Accelerated:     " << accelerated_steps << " steps" << endl;
+    cout << "  LL/site:         " << fixed << setprecision(6) << (ll_c / num_sites) << endl;
+    cout << "  Total time:      " << fixed << setprecision(1) << total_time << " ms" << endl;
+    cout << "  GPU E-step:      " << fixed << setprecision(1) << gpu_time << " ms" << endl;
+    cout << "  Avg/iter:        " << fixed << setprecision(1) << (gpu_time / final_iter) << " ms" << endl;
+    cout << "  Root probs:      [" << fixed << setprecision(8)
+         << tree.root_probabilities[0] << ", " << tree.root_probabilities[1]
+         << ", " << tree.root_probabilities[2] << ", " << tree.root_probabilities[3] << "]" << endl;
+    cout << "====================================================" << endl;
+
+    // Close output file
+    if (outfile.is_open()) {
+        outfile << "# Final LL: " << fixed << setprecision(6) << ll_c << endl;
+        outfile << "# Final ECDLL: " << final_ecdll << endl;
+        outfile << "# Total iterations: " << final_iter << endl;
+        outfile << "# Accelerated steps: " << accelerated_steps << endl;
+        outfile << "# Convergence: " << (converged ? reason : "Max iterations") << endl;
+        outfile.close();
+        cout << "Results saved to: " << output_file_path << endl;
+    }
+
+    // Cleanup
+    cudaFree(d_post_order);
+    cudaFree(d_edge_child);
+    cudaFree(d_edge_parent);
+    cudaFree(d_is_leaf);
+    cudaFree(d_leaf_taxon);
+    cudaFree(d_node_nch);
+    cudaFree(d_node_off);
+    cudaFree(d_node_edges);
+    cudaFree(d_root_edges);
+    cudaFree(d_bases);
+    cudaFree(d_weights);
+    cudaFree(d_root_probs);
+    cudaFree(d_trans);
+    cudaFree(d_up_msg);
+    cudaFree(d_up_scale);
+    cudaFree(d_down_msg);
+    cudaFree(d_down_scale);
+    cudaFree(d_counts);
+    cudaFree(d_pattern_ll);
+}
+
 // Compute HSS parameters using Bayes rule
 // This computes transition matrices in both directions and root probabilities at each node
 void ReparameterizeBH(EMBHTree& tree) {
@@ -1217,7 +1727,8 @@ void EvaluateBHModelWithRootAtCheck(EMBHTree& tree, const string& root_check_nam
 
 int main(int argc, char** argv) {
     if (argc < 5) {
-        cerr << "Usage: " << argv[0] << " -e <edge_list> -p <patterns> -x <taxon_order> -b <basecomp> [-o root_optimize] [-c root_check] [-r result_file] [max_iter]" << endl;
+        cerr << "Usage: " << argv[0] << " -e <edge_list> -p <patterns> -x <taxon_order> -b <basecomp> [-o root_optimize] [-c root_check] [-r result_file] [-a alpha] [max_iter]" << endl;
+        cerr << "  -a alpha : Enable Aitken parameter acceleration with step size alpha (default: 0.3)" << endl;
         return 1;
     }
 
@@ -1225,6 +1736,8 @@ int main(int argc, char** argv) {
     string root_optimize_name, root_check_name;
     string result_file;
     int max_iter = 100;
+    bool use_param_acceleration = false;
+    double aitken_alpha = 0.3;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) edge_file = argv[++i];
@@ -1234,6 +1747,10 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) root_optimize_name = argv[++i];
         else if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) root_check_name = argv[++i];
         else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) result_file = argv[++i];
+        else if (strcmp(argv[i], "-a") == 0 && i + 1 < argc) {
+            use_param_acceleration = true;
+            aitken_alpha = atof(argv[++i]);
+        }
         else if (argv[i][0] != '-') max_iter = atoi(argv[i]);
     }
 
@@ -1248,9 +1765,17 @@ int main(int argc, char** argv) {
         output_file_path = result_file;
     } else {
         // Save to results directory (relative to current working directory)
-        // Use root_optimize_name if provided, otherwise "default"
-        string root_name = root_optimize_name.empty() ? "default" : root_optimize_name;
-        output_file_path = "results/em_results_" + root_name + ".txt";
+        // Format: em_results_root_opt_<opt>_root_check_<check>_alpha_<value>.txt
+        string opt_part = root_optimize_name.empty() ? "default" : root_optimize_name;
+        string check_part = root_check_name.empty() ? "none" : root_check_name;
+
+        if (use_param_acceleration) {
+            ostringstream alpha_str;
+            alpha_str << fixed << setprecision(2) << aitken_alpha;
+            output_file_path = "results/em_results_root_opt_" + opt_part + "_root_check_" + check_part + "_alpha_" + alpha_str.str() + ".txt";
+        } else {
+            output_file_path = "results/em_results_root_opt_" + opt_part + "_root_check_" + check_part + ".txt";
+        }
     }
 
     cout << "=== GPU EMBH with Aitken Acceleration ===" << endl;
@@ -1262,6 +1787,7 @@ int main(int argc, char** argv) {
     if (!root_check_name.empty()) cout << "Root check: " << root_check_name << endl;
     cout << "Result file: " << output_file_path << endl;
     cout << "Max iterations: " << max_iter << endl;
+    if (use_param_acceleration) cout << "Parameter acceleration: enabled (alpha=" << aitken_alpha << ")" << endl;
 
     EMBHTree tree = load_tree(edge_file, pattern_file, taxon_file, basecomp_file);
     cout << "Loaded: " << tree.num_taxa << " taxa, " << tree.edge_child_nodes.size()
@@ -1284,7 +1810,11 @@ int main(int argc, char** argv) {
     }
 
     // Run EM optimization
-    embh_aitken_gpu(tree, max_iter, output_file_path);
+    if (use_param_acceleration) {
+        embh_aitken_acc_bh_convergence(tree, max_iter, output_file_path, aitken_alpha);
+    } else {
+        embh_aitken_gpu(tree, max_iter, output_file_path);
+    }
 
     // Evaluate at check root if specified
     if (!root_check_name.empty()) {
