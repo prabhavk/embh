@@ -1,0 +1,8 @@
+# EM Results
+# Patterns: 648, Sites: 1000
+# iter,LL,ECDLL,improvement,rate,aitken_dist,gpu_time_ms
+1,-18197.284437,-20629.122989,1112.778877,0.000000,0.000000,3.46
+# Final LL: -18197.284437
+# Final ECDLL: -20629.122989
+# Total iterations: 1
+# Convergence: Max iterations

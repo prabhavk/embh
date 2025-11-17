@@ -1703,6 +1703,71 @@ double ComputeLogLikelihoodCPU(const EMBHTree& tree) {
 }
 
 // Evaluate BH model with root at check location
+void save_bh_parameters(const EMBHTree& tree, const string& filename) {
+    ofstream out(filename);
+    if (!out.is_open()) {
+        cerr << "Error: Could not open file " << filename << " for writing" << endl;
+        return;
+    }
+
+    out << fixed << setprecision(14);
+
+    // Save root information
+    out << "[ROOT]" << endl;
+    out << tree.node_names[tree.root_node_id] << endl;
+    out << tree.root_node_id << endl;
+
+    // Save root probabilities
+    out << "[ROOT_PROBABILITY]" << endl;
+    for (int i = 0; i < 4; i++) {
+        out << tree.root_probabilities[i];
+        if (i < 3) out << " ";
+    }
+    out << endl;
+
+    // Save tree structure
+    out << "[TREE_STRUCTURE]" << endl;
+    out << tree.node_names.size() << " " << tree.num_taxa << " " << tree.edge_child_nodes.size() << endl;
+
+    // Save node names
+    out << "[NODE_NAMES]" << endl;
+    for (const auto& name : tree.node_names) {
+        out << name << endl;
+    }
+
+    // Save edges with branch lengths and transition matrices
+    out << "[EDGES]" << endl;
+    out << tree.edge_child_nodes.size() << endl;
+    for (size_t e = 0; e < tree.edge_child_nodes.size(); e++) {
+        int parent = tree.edge_parent_nodes[e];
+        int child = tree.edge_child_nodes[e];
+        double branch_len = tree.branch_lengths[e];
+
+        out << tree.node_names[parent] << " " << tree.node_names[child] << " " << branch_len << endl;
+
+        // Save transition matrix for this edge
+        out << "[TRANSITION_MATRIX_" << e << "]" << endl;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                out << tree.transition_matrices[e][i][j];
+                if (j < 3) out << " ";
+            }
+            out << endl;
+        }
+    }
+
+    // Save parent map
+    out << "[PARENT_MAP]" << endl;
+    for (size_t i = 0; i < tree.node_parent.size(); i++) {
+        out << tree.node_parent[i];
+        if (i < tree.node_parent.size() - 1) out << " ";
+    }
+    out << endl;
+
+    out.close();
+    cout << "BH parameters saved to " << filename << endl;
+}
+
 void EvaluateBHModelWithRootAtCheck(EMBHTree& tree, const string& root_check_name) {
     if (tree.name_to_id.find(root_check_name) == tree.name_to_id.end()) {
         cerr << "Error: Root check vertex " << root_check_name << " not found" << endl;
@@ -1727,14 +1792,16 @@ void EvaluateBHModelWithRootAtCheck(EMBHTree& tree, const string& root_check_nam
 
 int main(int argc, char** argv) {
     if (argc < 5) {
-        cerr << "Usage: " << argv[0] << " -e <edge_list> -p <patterns> -x <taxon_order> -b <basecomp> [-o root_optimize] [-c root_check] [-r result_file] [-a alpha] [max_iter]" << endl;
+        cerr << "Usage: " << argv[0] << " -e <edge_list> -p <patterns> -x <taxon_order> -b <basecomp> [-o root_optimize] [-c root_check] [-r result_file] [-a alpha] [-s save_params] [max_iter]" << endl;
         cerr << "  -a alpha : Enable Aitken parameter acceleration with step size alpha (default: 0.3)" << endl;
+        cerr << "  -s file  : Save BH parameters to file after EM" << endl;
         return 1;
     }
 
     string edge_file, pattern_file, taxon_file, basecomp_file;
     string root_optimize_name, root_check_name;
     string result_file;
+    string save_params_file;
     int max_iter = 100;
     bool use_param_acceleration = false;
     double aitken_alpha = 0.3;
@@ -1747,6 +1814,7 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) root_optimize_name = argv[++i];
         else if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) root_check_name = argv[++i];
         else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) result_file = argv[++i];
+        else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) save_params_file = argv[++i];
         else if (strcmp(argv[i], "-a") == 0 && i + 1 < argc) {
             use_param_acceleration = true;
             aitken_alpha = atof(argv[++i]);
@@ -1819,6 +1887,11 @@ int main(int argc, char** argv) {
     // Evaluate at check root if specified
     if (!root_check_name.empty()) {
         EvaluateBHModelWithRootAtCheck(tree, root_check_name);
+    }
+
+    // Save BH parameters if requested
+    if (!save_params_file.empty()) {
+        save_bh_parameters(tree, save_params_file);
     }
 
     return 0;

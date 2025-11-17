@@ -1,0 +1,83 @@
+EMBH with Aitken Acceleration - Multi-Root 10 Trial Summary
+Date: 2025-11-17 16:58:24
+Patterns file: data/patterns.pat
+Number of trials per root: 10
+
+=== Root: h_0 ===
+Iterations to Convergence:
+  Mean:   17.00
+  Std:    0.00
+  Min:    17
+  Max:    17
+
+Final Log-Likelihood:
+  Mean:   -24921984.5328086801
+  Std:    4.4078229242e-09
+  Range:  7.4505805969e-09
+
+Total Time (ms):
+  Mean:   21051.52
+  Std:    346.53
+
+Lambda Values (Contraction Factor):
+  Mean:   0.487827
+  Std:    0.088075
+
+Acceleration Factors:
+  Mean:   1.600908
+  Std:    0.227619
+
+--------------------------------------------------
+
+=== Root: h_8 ===
+Iterations to Convergence:
+  Mean:   20.00
+  Std:    0.00
+  Min:    20
+  Max:    20
+
+Final Log-Likelihood:
+  Mean:   -24921984.6973858252
+  Std:    3.3320009373e-09
+  Range:  3.7252902985e-09
+
+Total Time (ms):
+  Mean:   24546.92
+  Std:    10.28
+
+Lambda Values (Contraction Factor):
+  Mean:   0.492559
+  Std:    0.081092
+
+Acceleration Factors:
+  Mean:   1.609696
+  Std:    0.208710
+
+--------------------------------------------------
+
+=== Root: h_14 ===
+Iterations to Convergence:
+  Mean:   20.00
+  Std:    0.00
+  Min:    20
+  Max:    20
+
+Final Log-Likelihood:
+  Mean:   -24922004.8328171894
+  Std:    4.2474844497e-09
+  Range:  1.1175870895e-08
+
+Total Time (ms):
+  Mean:   24401.66
+  Std:    122.26
+
+Lambda Values (Contraction Factor):
+  Mean:   0.493741
+  Std:    0.079968
+
+Acceleration Factors:
+  Mean:   1.612521
+  Std:    0.205495
+
+--------------------------------------------------
+

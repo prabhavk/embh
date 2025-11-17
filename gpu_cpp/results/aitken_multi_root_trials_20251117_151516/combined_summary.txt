@@ -1,0 +1,83 @@
+EMBH with Aitken Acceleration - Multi-Root 2 Trial Summary
+Date: 2025-11-17 15:25:38
+Patterns file: ../data/patterns.pat
+Number of trials per root: 2
+
+=== Root: default ===
+Iterations to Convergence:
+  Mean:   17.00
+  Std:    0.00
+  Min:    17
+  Max:    17
+
+Final Log-Likelihood:
+  Mean:   -24921984.5328086764
+  Std:    0.0000000000e+00
+  Range:  0.0000000000e+00
+
+Total Time (ms):
+  Mean:   21939.05
+  Std:    8.90
+
+Lambda Values (Contraction Factor):
+  Mean:   0.487827
+  Std:    0.088075
+
+Acceleration Factors:
+  Mean:   1.600908
+  Std:    0.227619
+
+--------------------------------------------------
+
+=== Root: h_8 ===
+Iterations to Convergence:
+  Mean:   100.00
+  Std:    0.00
+  Min:    100
+  Max:    100
+
+Final Log-Likelihood:
+  Mean:   -1758068.6998854543
+  Std:    0.0000000000e+00
+  Range:  0.0000000000e+00
+
+Total Time (ms):
+  Mean:   141464.49
+  Std:    251.49
+
+Lambda Values (Contraction Factor):
+  Mean:   nan
+  Std:    nan
+
+Acceleration Factors:
+  Mean:   nan
+  Std:    nan
+
+--------------------------------------------------
+
+=== Root: h_14 ===
+Iterations to Convergence:
+  Mean:   100.00
+  Std:    0.00
+  Min:    100
+  Max:    100
+
+Final Log-Likelihood:
+  Mean:   -1756685.0801854825
+  Std:    0.0000000000e+00
+  Range:  0.0000000000e+00
+
+Total Time (ms):
+  Mean:   139362.56
+  Std:    104.16
+
+Lambda Values (Contraction Factor):
+  Mean:   nan
+  Std:    nan
+
+Acceleration Factors:
+  Mean:   nan
+  Std:    nan
+
+--------------------------------------------------
+

@@ -1,14 +1,14 @@
 # Makefile for CUDA GPU acceleration of EMBH log-likelihood computation
 
 NVCC = nvcc
-NVCC_FLAGS = -O3 -std=c++11 -arch=sm_60 -Xcompiler -Wall
+NVCC_FLAGS = -O3 -std=c++14 -arch=sm_60 -Xcompiler -Wall
 
 # CPU-only programs
 CXX = g++
-CXXFLAGS = -O3 -std=c++11 -Wall
+CXXFLAGS = -O3 -std=c++14 -Wall
 
 # Targets
-all: naive_gpu_ll grouped_ll_cpu test_gpu_loader test_leaf_only libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu
+all: naive_gpu_ll grouped_ll_cpu test_gpu_loader test_leaf_only libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu precision_memory_timing_test embh_clique_tree_gpu bh_ssh clique_ll_invariance
 
 # Naive GPU implementation (pattern parallelization)
 naive_gpu_ll: naive_gpu_ll.cu
@@ -29,6 +29,26 @@ test_gpu_likelihood: test_gpu_likelihood.cu gpu_likelihood.o
 embh_aitken_gpu: embh_aitken_gpu.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ $<
 
+# Precision, Memory, and Timing Test
+precision_memory_timing_test: precision_memory_timing_test.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# Clique LL Consistency Test
+clique_ll_consistency_test: clique_ll_consistency_test.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# EMBH Clique Tree GPU (with Aitken acceleration and parameter saving)
+embh_clique_tree_gpu: embh_clique_tree_gpu.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# BH SSH (Steel, Szekely, Hendy) Invariance Test
+bh_ssh: bh_ssh.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
+# Clique LL Invariance Test
+clique_ll_invariance: clique_ll_invariance.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ $<
+
 # CPU reference for grouped approach
 grouped_ll_cpu: grouped_ll_cpu.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
@@ -43,6 +63,7 @@ test_leaf_only: test_leaf_only.cpp
 
 clean:
 	rm -f naive_gpu_ll grouped_ll_cpu test_gpu_loader test_leaf_only
-	rm -f gpu_likelihood.o libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu
+	rm -f gpu_likelihood.o libgpu_likelihood.a test_gpu_likelihood embh_aitken_gpu precision_memory_timing_test
+	rm -f embh_clique_tree_gpu bh_ssh clique_ll_invariance
 
 .PHONY: all clean
